@@ -1,0 +1,236 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 8px;
+  --background: hsl(222, 84%, 5%);
+  --foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 5%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --popover: hsl(222, 84%, 5%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --primary: hsl(210, 100%, 50%);
+  --primary-foreground: hsl(222, 84%, 5%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 62%, 30%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --ring: hsl(210, 100%, 50%);
+  --chart-1: hsl(203.8863, 88.2845%, 53.1373%);
+  --chart-2: hsl(159.7826, 100%, 36.0784%);
+  --chart-3: hsl(42.0290, 92.8251%, 56.2745%);
+  --chart-4: hsl(147.1429, 78.5047%, 41.9608%);
+  --chart-5: hsl(341.4894, 75.2000%, 50.9804%);
+  --sidebar: hsl(222, 84%, 5%);
+  --sidebar-foreground: hsl(210, 40%, 98%);
+  --sidebar-primary: hsl(210, 100%, 50%);
+  --sidebar-primary-foreground: hsl(222, 84%, 5%);
+  --sidebar-accent: hsl(217, 32%, 17%);
+  --sidebar-accent-foreground: hsl(210, 40%, 98%);
+  --sidebar-border: hsl(217, 32%, 17%);
+  --sidebar-ring: hsl(210, 100%, 50%);
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: "JetBrains Mono", Consolas, monospace;
+  --spacing: 0.25rem;
+}
+
+.light {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(222, 84%, 5%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222, 84%, 5%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222, 84%, 5%);
+  --primary: hsl(210, 100%, 50%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(210, 40%, 96%);
+  --secondary-foreground: hsl(222, 84%, 5%);
+  --muted: hsl(210, 40%, 96%);
+  --muted-foreground: hsl(215, 16%, 47%);
+  --accent: hsl(210, 40%, 96%);
+  --accent-foreground: hsl(222, 84%, 5%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --border: hsl(214, 32%, 91%);
+  --input: hsl(214, 32%, 91%);
+  --ring: hsl(210, 100%, 50%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+.editor-line-numbers {
+  color: hsl(215, 20%, 65%);
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  padding-right: 10px;
+  text-align: right;
+  user-select: none;
+  min-width: 40px;
+}
+
+.editor-content {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: hsl(210, 40%, 98%);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  white-space: pre;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.latex-keyword { color: hsl(210, 100%, 70%); }
+.latex-command { color: hsl(290, 100%, 70%); }
+.latex-comment { color: hsl(120, 100%, 60%); }
+.latex-string { color: hsl(30, 100%, 70%); }
+
+.resizer {
+  width: 4px;
+  background: hsl(var(--border));
+  cursor: col-resize;
+  transition: background-color 0.2s;
+}
+
+.resizer:hover {
+  background: hsl(var(--primary) / 0.5);
+}
+
+.pdf-viewer {
+  background: hsl(0, 0%, 95%);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.floating-compile-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 50;
+  border-radius: 50%;
+  width: 3.5rem;
+  height: 3.5rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.section-optimize-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.section-header:hover .section-optimize-btn {
+  opacity: 1;
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, hsl(210, 100%, 50%) 0%, hsl(210, 100%, 60%) 100%);
+  height: 3px;
+  transition: width 0.3s ease;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.dropdown-enter {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.dropdown-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.modal-overlay {
+  backdrop-filter: blur(4px);
+}
+
+.file-drop-zone {
+  border: 2px dashed hsl(217, 32%, 17%);
+  transition: all 0.2s;
+}
+
+.file-drop-zone.dragover {
+  border-color: hsl(210, 100%, 50%);
+  background: hsl(210, 100%, 50%, 0.1);
+}
+
+.diff-removed {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-left: 4px solid rgb(239, 68, 68);
+}
+
+.diff-added {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-left: 4px solid rgb(34, 197, 94);
+}
+
+/* Ensure the main layout doesn't cause page scrolling */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Make sure the main content areas are properly constrained */
+.latex-editor-container {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* LaTeX Editor scrolling */
+.cm-editor {
+  height: 100% !important;
+}
+
+.cm-scroller {
+  overflow: auto !important;
+  max-height: 100% !important;
+}
+
+.cm-content {
+  min-height: 100% !important;
+}
+
+.pdf-preview-container {
+  height: 100%;
+  overflow: auto;
+}
+
+/* PDF iframe styling for better display */
+iframe[title="Resume PDF Preview"] {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  background: white;
+}
+

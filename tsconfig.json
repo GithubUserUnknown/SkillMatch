@@ -1,0 +1,27 @@
+{
+  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
+    "noEmit": true,
+    "module": "ESNext",                        // ES modules
+    "target": "ES2020",                        // Node 18+ compatible
+    "strict": true,
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "jsx": "preserve",
+    "esModuleInterop": true,                   // allows import fs from 'fs'
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,                      // avoid type conflicts
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "node",                // change from "bundler" for Node SDK
+    "resolveJsonModule": true,                 // needed if importing JSON configs
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  }
+}

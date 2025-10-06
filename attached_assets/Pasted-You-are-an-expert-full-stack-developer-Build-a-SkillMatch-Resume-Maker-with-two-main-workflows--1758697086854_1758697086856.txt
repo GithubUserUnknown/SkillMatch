@@ -1,0 +1,137 @@
+You are an expert full-stack developer. Build a SkillMatch Resume Maker with two main workflows:
+
+Edit Resume Page (Overleaf-style with AI Optimization)
+Quick Update Page (Fast AI Tailoring to Job Description)
+🔹 Edit Resume Page (Overleaf-style)
+
+Layout:
+
+Split screen:
+
+Left panel: editable LaTeX code of the resume.
+
+Right panel: live preview of compiled PDF.
+
+Preview updates only when user presses Ctrl+S (to avoid re-rendering every keystroke).
+
+Users can download PDF once satisfied.
+
+LaTeX Code Structure:
+
+Divide resume template into logical headers:
+
+Summary
+
+Work Experience
+
+Education
+
+Skills
+
+Projects
+
+Certifications
+
+Each section should be marked clearly in LaTeX with comments or headings for easy parsing (e.g., % ===== Summary =====).
+
+AI Optimization Options per Section:
+
+Next to each section header in the UI, provide two buttons:
+
+Optimize → Sends current section content + job description to Gemini → returns improved version.
+
+Advanced Optimize → Asks user for:
+
+Optional: Additional details/examples/metrics they want added.
+
+Compulsory: Job description.
+
+Sends section + job description (+ extras if given) to Gemini as structured JSON.
+
+Gemini returns optimized text, replacing only that section.
+
+Backend Flow:
+
+Store LaTeX as text with markers for sections.
+
+When optimizing a section:
+
+Extract only that section.
+
+Send JSON request:
+
+{ "section": "Work Experience", "current_content": "Managed a team of developers...", "job_description": "Looking for a backend engineer skilled in APIs...", "extra_details": "Improved API response times by 30%." }
+
+Gemini responds with improved section text.
+
+Replace section in LaTeX code → recompile → update preview.
+
+🔹 Quick Update Page
+
+Input:
+
+User either:
+
+Uploads existing resume (PDF/DOCX).
+
+Or selects one of their saved LaTeX resumes.
+
+Pastes job description.
+
+AI Flow (Fast Optimization):
+
+Backend splits resume into major sections (e.g., Summary, Work Experience, Education, Skills, Projects, Certifications).
+
+Instead of sending the whole resume at once, use batch optimization for speed:
+
+Send 3 sections at a time to Gemini (e.g., Summary + Work Experience + Education).
+
+As soon as response is received, send the next 3 sections (e.g., Skills + Projects + Certifications).
+
+This parallel-like streaming ensures full optimization within 3–5 seconds.
+
+Backend JSON Request (per batch):
+
+{ "sections": [ { "header": "Summary", "content": "Software engineer with 5 years experience...", }, { "header": "Work Experience", "content": "Built microservices for fintech app...", }, { "header": "Education", "content": "B.Tech in Computer Science..." } ], "job_description": "Looking for a backend engineer skilled in APIs, databases, and distributed systems." }
+
+AI Response Example:
+
+{ "optimized_sections": [ { "header": "Summary", "optimized_content": "Backend engineer with 5+ years of experience designing scalable APIs..." }, { "header": "Work Experience", "optimized_content": "Developed and optimized microservices handling 1M+ daily transactions..." }, { "header": "Education", "optimized_content": "B.Tech in Computer Science with focus on distributed systems..." } ] }
+
+Reconstruction:
+
+Replace old sections with optimized ones.
+
+Rebuild LaTeX → PDF.
+
+Show before vs after diff view (optional, for transparency).
+
+🔹 Extra Features for Both Pages
+
+ATS Compatibility Checker: Warn if LaTeX output uses multiple columns, tables, or non-standard fonts.
+
+Template Switching: Allow user to choose different LaTeX templates (modern, ATS-simple, creative) while keeping same content.
+
+Versioning: Save resume versions by job title (resume_backend_engineer.pdf, resume_datascientist.pdf).
+
+Download Options:
+
+PDF (recruiter-facing, nicely formatted).
+
+DOCX / TXT (ATS-friendly fallback via Pandoc).
+
+🔹 Tech Notes
+
+Frontend: React/Next.js with split-pane editor (like Monaco Editor for LaTeX + pdf.js for preview).
+
+Backend: FastAPI (Python) or Node.js.
+
+Resume parsing: pdfplumber, python-docx, textract.
+
+AI optimization: Gemini API.
+
+LaTeX compilation: pdflatex / tectonic.
+
+Data Format: Always maintain resume in structured JSON for easy manipulation before injecting into LaTeX.
+
+generate a proper plan and execute it and lemme tell again in simple words on the resume edit page, one side should be latex code and the other side it's preview, changes in the latex code should be shown after pressing ctrl+s on the preview(gets compiled) , user can download it after editing,in the code we should divide the code with the help of headers summary etc., and users can click on the header and there will be option to optimize it directly, or advanced optimization in whiich user will be asked to place any additional details if he wants(optional) and job description(compulsory), which will then be send to gemini in json format and the response will be used to directly optimize that section. this will be in edit resume page on Quick update page, user will only give the resume, or choose the resume that was made on the website with latex, and paste the job description and in backend we will send 3 headings, like summary, work experience education at a time to gemini and ask it to update it according to the job description, and the response has been recieved in the next second we will send the other 3 headings, trying to generate the new updated resume according to the job description within 3-5 seconds
