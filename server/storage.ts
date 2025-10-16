@@ -1,5 +1,14 @@
 import { type User, type InsertUser, type Resume, type InsertResume, type OptimizationRecord, type ResumeSection } from "@shared/schema";
 import { randomUUID } from "crypto";
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Define the path for the JSON database file
+const DB_PATH = path.join(__dirname, '..', 'db.json');
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -25,6 +34,38 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.resumes = new Map();
     this.optimizations = new Map();
+    this.load().catch(err => console.error("Failed to load database:", err));
+  }
+
+  private async load() {
+    try {
+      const data = await fs.readFile(DB_PATH, 'utf-8');
+      const { users, resumes, optimizations } = JSON.parse(data);
+      this.users = new Map(users);
+      this.resumes = new Map(resumes);
+      this.optimizations = new Map(optimizations);
+      console.log('Database loaded successfully from db.json');
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        console.log('db.json not found, starting with a new database.');
+        await this.save(); // Create the file if it doesn't exist
+      } else {
+        console.error('Failed to read or parse db.json:', error);
+      }
+    }
+  }
+
+  private async save() {
+    try {
+      const data = JSON.stringify({
+        users: Array.from(this.users.entries()),
+        resumes: Array.from(this.resumes.entries()),
+        optimizations: Array.from(this.optimizations.entries()),
+      }, null, 2);
+      await fs.writeFile(DB_PATH, data, 'utf-8');
+    } catch (error) {
+      console.error('Failed to save database to db.json:', error);
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -41,6 +82,7 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const user: User = { ...insertUser, id };
     this.users.set(id, user);
+    await this.save();
     return user;
   }
 
@@ -68,6 +110,7 @@ export class MemStorage implements IStorage {
       sections: (insertResume.sections as ResumeSection[]) || [],
     };
     this.resumes.set(id, resume);
+    await this.save();
     return resume;
   }
 
@@ -82,11 +125,16 @@ export class MemStorage implements IStorage {
       userId: updates.userId || existing.userId,
     };
     this.resumes.set(id, updated);
+    await this.save();
     return updated;
   }
 
   async deleteResume(id: string): Promise<boolean> {
-    return this.resumes.delete(id);
+    const deleted = this.resumes.delete(id);
+    if (deleted) {
+      await this.save();
+    }
+    return deleted;
   }
 
   async getOptimizationHistory(resumeId: string): Promise<OptimizationRecord[]> {
@@ -103,6 +151,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.optimizations.set(id, record);
+    await this.save();
     return record;
   }
 }
