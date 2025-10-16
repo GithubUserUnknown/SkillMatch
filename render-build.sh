@@ -13,7 +13,13 @@ apt-get update
 echo "📄 Installing LaTeX..."
 # texlive-bibtex-extra: Bibliography packages (biblatex)
 # texlive-fonts-extra: Additional fonts (fontawesome5)
-apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-bibtex-extra texlive-fonts-extra
+# biber: A BibTeX replacement for users of BibLaTeX
+apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-bibtex-extra texlive-fonts-extra biber
+
+# Update TeX Live
+echo "🔄 Updating TeX Live..."
+tlmgr update --self
+tlmgr update --all
 
 # Install Pandoc (for DOC conversion)
 echo "📝 Installing Pandoc..."
