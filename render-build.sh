@@ -10,7 +10,12 @@ apt-get update
 
 # Install LaTeX (for PDF compilation)
 echo "📄 Installing LaTeX..."
-apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended
+# texlive-latex-base: Basic LaTeX packages
+# texlive-latex-extra: Additional LaTeX packages (titlesec, enumitem, etc.)
+# texlive-fonts-recommended: Recommended fonts
+# texlive-bibtex-extra: Bibliography packages (biblatex)
+# texlive-fonts-extra: Additional fonts (fontawesome5)
+apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-bibtex-extra texlive-fonts-extra
 
 # Install Pandoc (for DOC conversion)
 echo "📝 Installing Pandoc..."
