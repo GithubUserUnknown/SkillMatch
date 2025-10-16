@@ -44,10 +44,10 @@
   <internal package="biblatex" priority="9" active="1">
     <generic>latex</generic>
     <provides type="dynamic">
-      <file>1b0a40fd-b0d9-41cf-bef8-d506dbf10f9c.bcf</file>
+      <file>c1c26e82-ca08-496b-b639-d5e24b107a2d.bcf</file>
     </provides>
     <requires type="dynamic">
-      <file>1b0a40fd-b0d9-41cf-bef8-d506dbf10f9c.bbl</file>
+      <file>c1c26e82-ca08-496b-b639-d5e24b107a2d.bbl</file>
     </requires>
     <requires type="static">
       <file>blx-dm.def</file>
@@ -64,19 +64,19 @@
     <generic>biber</generic>
     <cmdline>
       <binary>biber</binary>
-      <infile>1b0a40fd-b0d9-41cf-bef8-d506dbf10f9c</infile>
+      <infile>c1c26e82-ca08-496b-b639-d5e24b107a2d</infile>
     </cmdline>
     <input>
-      <file>1b0a40fd-b0d9-41cf-bef8-d506dbf10f9c.bcf</file>
+      <file>c1c26e82-ca08-496b-b639-d5e24b107a2d.bcf</file>
     </input>
     <output>
-      <file>1b0a40fd-b0d9-41cf-bef8-d506dbf10f9c.bbl</file>
+      <file>c1c26e82-ca08-496b-b639-d5e24b107a2d.bbl</file>
     </output>
     <provides type="dynamic">
-      <file>1b0a40fd-b0d9-41cf-bef8-d506dbf10f9c.bbl</file>
+      <file>c1c26e82-ca08-496b-b639-d5e24b107a2d.bbl</file>
     </provides>
     <requires type="dynamic">
-      <file>1b0a40fd-b0d9-41cf-bef8-d506dbf10f9c.bcf</file>
+      <file>c1c26e82-ca08-496b-b639-d5e24b107a2d.bcf</file>
     </requires>
   </external>
 </requests>
