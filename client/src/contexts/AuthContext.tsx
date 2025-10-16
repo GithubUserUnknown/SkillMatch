@@ -40,11 +40,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string) => {
+    const redirectURL = import.meta.env.VITE_SITE_URL
+      ? `${import.meta.env.VITE_SITE_URL}`
+      : `${window.location.origin}/`;
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/`,
+        emailRedirectTo: redirectURL,
       },
     });
     return { error };
@@ -62,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`,
+        redirectTo: 'https://www.skillmatch.insaneworld.dev/',
       },
     });
     return { error };
