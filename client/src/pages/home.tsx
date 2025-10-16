@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
+import Navbar from "@/components/Navbar";
+import ChatBubble from "@/components/chat-bubble";
+import ApiKeyDialog from "@/components/api-key-dialog";
+import { hasValidApiKey, getApiKey } from "@/lib/api-key-manager";
 import {
-  Moon,
-  User,
   Upload,
   FileText,
   Target,
@@ -17,7 +19,15 @@ import {
   AlertCircle,
   XCircle,
   Zap,
-  Edit
+  Edit,
+  Loader2,
+  Sparkles,
+  BookOpen,
+  Award,
+  Code,
+  Clock,
+  ExternalLink,
+  Key
 } from "lucide-react";
 
 /**
@@ -48,6 +58,29 @@ type ATSResponse = { issues: string[]; passed_checks: string[] };
 
 type RecoResponse = { certs: Record<string, string[]>; projects: Record<string, string[]> };
 
+type ProjectIdea = {
+  title: string;
+  description: string;
+  techStack: string[];
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  estimatedTime: string;
+  keyFeatures: string[];
+};
+
+type CertificateRecommendation = {
+  name: string;
+  provider: string;
+  relevance: string;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  estimatedTime: string;
+  url?: string;
+};
+
+type AIRecommendations = {
+  projects: ProjectIdea[];
+  certificates: CertificateRecommendation[];
+};
+
 export default function Home() {
   const [, setLocation] = useLocation();
   const [resumeText, setResumeText] = useState("");
@@ -61,6 +94,9 @@ export default function Home() {
   const [match, setMatch] = useState<MatchResponse | null>(null);
   const [ats, setAts] = useState<ATSResponse | null>(null);
   const [recos, setRecos] = useState<RecoResponse | null>(null);
+  const [aiRecommendations, setAiRecommendations] = useState<AIRecommendations | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
 
   const scorePct = useMemo(() => Math.round((match?.score || 0) * 100), [match]);
 
@@ -130,6 +166,65 @@ export default function Home() {
       alert("Failed to run ATS check.");
     } finally {
       setAtsLoading(false);
+    }
+  }
+
+  async function handleGenerateAIRecommendations() {
+    // Check if API key is set
+    if (!hasValidApiKey()) {
+      setShowApiKeyDialog(true);
+      return;
+    }
+
+    if (!jdText || !match?.gaps) {
+      return alert("Please run the skill match analysis first.");
+    }
+
+    setAiLoading(true);
+    try {
+      // Get API key
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        setShowApiKeyDialog(true);
+        setAiLoading(false);
+        return;
+      }
+
+      // Extract tech stack from parsed JD
+      const techStack = parsedJD?.skills_required || [];
+
+      // Generate project ideas
+      const projectsResponse = await fetch(`${API_BASE}/ai/project-ideas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobDescription: jdText,
+          techStack: techStack,
+          skillGaps: match.gaps,
+          apiKey: apiKey
+        }),
+      }).then((r) => r.json());
+
+      // Generate certificate recommendations
+      const certsResponse = await fetch(`${API_BASE}/ai/certificate-recommendations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jobDescription: jdText,
+          skillGaps: match.gaps,
+          apiKey: apiKey
+        }),
+      }).then((r) => r.json());
+
+      setAiRecommendations({
+        projects: projectsResponse.projects || [],
+        certificates: certsResponse.certificates || []
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Failed to generate AI recommendations. Please try again.");
+    } finally {
+      setAiLoading(false);
     }
   }
 
@@ -210,59 +305,7 @@ export default function Home() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <FileText className="text-primary text-xl" />
-              <h1 className="text-xl font-bold">SkillMatch Resume Maker</h1>
-            </div>
-            <nav className="flex space-x-1">
-              <Button
-                className="bg-primary text-primary-foreground"
-              >
-                <FileText className="h-4 w-4 mr-2" />Home
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/resume-editor")}
-              >
-                <Edit className="h-4 w-4 mr-2" />Edit Resume
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/quick-update")}
-              >
-                <Zap className="h-4 w-4 mr-2" />Quick Update
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/dashboard")}
-              >
-                <Target className="h-4 w-4 mr-2" />Dashboard
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/profile")}
-              >
-                <User className="h-4 w-4 mr-2" />Profile
-              </Button>
-            </nav>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon">
-              <Moon className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <span className="text-sm font-medium">John Doe</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Navbar currentPage="home" />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto p-8">
@@ -348,7 +391,7 @@ export default function Home() {
                   placeholder="Paste the job description here..."
                   value={jdText}
                   onChange={(e) => setJdText(e.target.value)}
-                  className="min-h-[120px]"
+                  className="min-h-[212px]"
                 />
 
                 <Button
@@ -451,6 +494,213 @@ export default function Home() {
                       </div>
                     </div>
                   )}
+
+                  {/* AI-Powered Recommendations Button */}
+                  {match.gaps.length > 0 && !aiRecommendations && (
+                    <div className="mt-6 pt-6 border-t">
+                      <Button
+                        onClick={handleGenerateAIRecommendations}
+                        disabled={aiLoading}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {aiLoading ? (
+                          <>
+                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                            Generating AI Recommendations...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-5 w-5 mr-2" />
+                            Get AI-Powered Project Ideas & Certificates
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        {aiLoading
+                          ? "This may take 10-15 seconds. Please wait..."
+                          : "Get personalized project ideas and certificate recommendations using AI"
+                        }
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.section>
+          )}
+
+          {/* AI Loading State */}
+          {aiLoading && !aiRecommendations && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <Card className="rounded-2xl shadow-sm border-2 border-primary/20">
+                <CardContent className="p-12">
+                  <div className="flex flex-col items-center justify-center space-y-6">
+                    <div className="relative">
+                      <Loader2 className="h-16 w-16 text-primary animate-spin" />
+                      <Sparkles className="h-8 w-8 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <h3 className="text-2xl font-bold">Generating AI Recommendations</h3>
+                      <p className="text-muted-foreground max-w-md">
+                        Our AI is analyzing your profile and creating personalized project ideas and certificate recommendations...
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        This usually takes 10-15 seconds
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-8 text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-2">
+                        <Code className="h-4 w-4" />
+                        <span>Analyzing tech stack</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <BookOpen className="h-4 w-4" />
+                        <span>Finding projects</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Award className="h-4 w-4" />
+                        <span>Matching certificates</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.section>
+          )}
+
+          {/* AI Recommendations Section */}
+          {aiRecommendations && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold">AI-Powered Recommendations</h2>
+                <Button
+                  onClick={handleGenerateAIRecommendations}
+                  disabled={aiLoading}
+                  variant="outline"
+                  size="sm"
+                >
+                  {aiLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Regenerating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Regenerate
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Project Ideas */}
+              <Card className="rounded-2xl shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="h-5 w-5" />
+                    <span>Recommended Projects</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Build these projects to demonstrate your skills and fill the gaps
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {aiRecommendations.projects.map((project, idx) => (
+                    <Card key={idx} className="border-l-4 border-l-blue-500">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-lg">{project.title}</h4>
+                          <Badge variant={
+                            project.difficulty === 'Beginner' ? 'default' :
+                            project.difficulty === 'Intermediate' ? 'secondary' : 'destructive'
+                          }>
+                            {project.difficulty}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-3">{project.description}</p>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2 text-sm">
+                            <span className="font-medium">Tech Stack:</span>
+                            <div className="flex flex-wrap gap-1">
+                              {project.techStack.map((tech, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">{tech}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium">Estimated Time:</span> {project.estimatedTime}
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium">Key Features:</span>
+                            <ul className="list-disc pl-5 mt-1 space-y-1">
+                              {project.keyFeatures.map((feature, i) => (
+                                <li key={i}>{feature}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Certificate Recommendations */}
+              <Card className="rounded-2xl shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Target className="h-5 w-5" />
+                    <span>Recommended Certifications</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Earn these certifications to validate your skills and stand out
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {aiRecommendations.certificates.map((cert, idx) => (
+                    <Card key={idx} className="border-l-4 border-l-green-500">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-lg">{cert.name}</h4>
+                            <p className="text-sm text-muted-foreground">{cert.provider}</p>
+                          </div>
+                          <Badge variant={
+                            cert.difficulty === 'Beginner' ? 'default' :
+                            cert.difficulty === 'Intermediate' ? 'secondary' : 'destructive'
+                          }>
+                            {cert.difficulty}
+                          </Badge>
+                        </div>
+                        <p className="text-sm mb-2">{cert.relevance}</p>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            <span className="font-medium">Time:</span> {cert.estimatedTime}
+                          </span>
+                          {cert.url && (
+                            <a
+                              href={cert.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline"
+                            >
+                              Learn More →
+                            </a>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </CardContent>
               </Card>
             </motion.section>
@@ -557,6 +807,22 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* Chat Bubble */}
+      <ChatBubble />
+
+      {/* API Key Dialog */}
+      <ApiKeyDialog
+        open={showApiKeyDialog}
+        onOpenChange={setShowApiKeyDialog}
+        onApiKeySet={() => {
+          setShowApiKeyDialog(false);
+          // Retry the AI recommendations after API key is set
+          if (jdText && match?.gaps) {
+            handleGenerateAIRecommendations();
+          }
+        }}
+      />
     </div>
   );
 }

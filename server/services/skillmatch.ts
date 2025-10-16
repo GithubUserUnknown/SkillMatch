@@ -36,16 +36,43 @@ const ROLE_CORE_SKILLS: Record<string, string[]> = {
 
 // Skill → recommended certs/courses (MVP)
 const SKILL_CERTS: Record<string, string[]> = {
+  // Cloud Platforms
   aws: ["AWS Certified Cloud Practitioner", "AWS Solutions Architect – Associate"],
-  azure: ["Microsoft Azure Fundamentals (AZ-900)"],
-  gcp: ["Google Associate Cloud Engineer"],
+  azure: ["Microsoft Azure Fundamentals (AZ-900)", "Microsoft AI Fundamentals (AI-900)"],
+  gcp: ["Google Associate Cloud Engineer", "Google Cloud Digital Leader"],
+
+  // Data & Analytics
   dbt: ["dbt Fundamentals"],
   snowflake: ["SnowPro Core"],
   "power bi": ["Microsoft PL-300: Power BI Data Analyst"],
   tableau: ["Tableau Desktop Specialist"],
-  docker: ["Docker Certified Associate"],
-  kubernetes: ["CKA – Certified Kubernetes Administrator"],
+
+  // DevOps & Containers
+  docker: ["Docker Certified Associate", "IBM Docker Essentials Badge"],
+  kubernetes: ["CKA – Certified Kubernetes Administrator", "KCNA – Kubernetes and Cloud Native Associate"],
+
+  // Programming Languages
+  python: ["PCEP – Certified Entry-Level Python Programmer (Python Institute)"],
+  java: ["Oracle Certified Java SE Programmer I"],
+  "c++": ["CPA – C++ Certified Associate Programmer (C++ Institute)"],
+  kotlin: ["JetBrains Kotlin Certification"],
+  javascript: ["freeCodeCamp JavaScript Algorithms and Data Structures Certification"],
+  typescript: ["Microsoft Learn TypeScript Learning Path (with badge)"],
+  go: ["Go Developer Certification (Coursera / Google Cloud)"],
+  rust: ["Rust Programming Language Certificate (Rustlings + official course completion)"],
+  swift: ["Apple Swift Certification (Swift Playgrounds / Swift Foundations)"],
+  php: ["Zend PHP Engineer Certification (community / open version)"],
+  ruby: ["Ruby Association Certified Ruby Programmer (Silver Level)"],
+  "c#": ["Microsoft Certified: .NET Fundamentals"],
+  sql: ["Microsoft DP-900: Data Fundamentals"],
+
+  // Bonus / Universal Developer Skills
+  git: ["GitHub Foundations (GitHub Skills)"],
+  linux: ["Linux Foundation Certified IT Associate (LFCA)", "Introduction to Linux (LFS101x – Free edX course)"],
+  html: ["freeCodeCamp Responsive Web Design Certification"],
+  css: ["freeCodeCamp Responsive Web Design Certification"],
 };
+
 
 // Skill → project ideas (MVP)
 const SKILL_PROJECTS: Record<string, string[]> = {

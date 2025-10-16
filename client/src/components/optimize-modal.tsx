@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Sparkles } from "lucide-react";
 
 interface OptimizeModalProps {
   open: boolean;
@@ -112,6 +113,7 @@ export default function OptimizeModal({
             <Button
               variant="secondary"
               onClick={() => onOpenChange(false)}
+              disabled={isLoading}
               data-testid="cancel-optimization"
             >
               Cancel
@@ -123,12 +125,12 @@ export default function OptimizeModal({
             >
               {isLoading ? (
                 <>
-                  <i className="fas fa-spinner animate-spin mr-2"></i>
-                  Optimizing...
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Optimizing with AI...
                 </>
               ) : (
                 <>
-                  <i className="fas fa-magic mr-2"></i>
+                  <Sparkles className="h-4 w-4 mr-2" />
                   {isAdvanced ? "Advanced " : ""}Optimize
                 </>
               )}

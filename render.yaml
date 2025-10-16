@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: skillmatch-resume
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: bash render-build.sh
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: VITE_SUPABASE_KEY
+        sync: false
+

@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { Check, X } from "lucide-react";
 
 interface DiffViewModalProps {
@@ -9,7 +11,7 @@ interface DiffViewModalProps {
   original: string;
   optimized: string;
   changes: string[];
-  onAccept: () => void;
+  onAccept: (editedContent?: string) => void;
   isApplying: boolean;
 }
 
@@ -22,6 +24,12 @@ export default function DiffViewModal({
   onAccept,
   isApplying,
 }: DiffViewModalProps) {
+  const [editedContent, setEditedContent] = useState(optimized);
+
+  // Update edited content when optimized content changes
+  useEffect(() => {
+    setEditedContent(optimized);
+  }, [optimized]);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-5/6 flex flex-col">
@@ -40,12 +48,13 @@ export default function DiffViewModal({
           </div>
           
           <div className="flex flex-col">
-            <h4 className="font-medium mb-2 text-sm">After (AI Optimized)</h4>
-            <ScrollArea className="flex-1 bg-input rounded-md p-4">
-              <div className="diff-added p-2 rounded text-sm font-mono whitespace-pre-wrap">
-                {optimized}
-              </div>
-            </ScrollArea>
+            <h4 className="font-medium mb-2 text-sm">After (AI Optimized - Editable)</h4>
+            <Textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              className="flex-1 bg-input rounded-md p-4 text-sm font-mono resize-none"
+              placeholder="Edit the optimized content here..."
+            />
           </div>
         </div>
 
@@ -75,7 +84,7 @@ export default function DiffViewModal({
             Reject Changes
           </Button>
           <Button
-            onClick={onAccept}
+            onClick={() => onAccept(editedContent)}
             disabled={isApplying}
             data-testid="accept-changes"
           >

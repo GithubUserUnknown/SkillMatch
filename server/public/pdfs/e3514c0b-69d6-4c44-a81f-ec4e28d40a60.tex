@@ -1,0 +1,260 @@
+%-----------------------------------------------------------------------------------------------------------------------------------------------%
+%	The MIT License (MIT)
+%
+%	Copyright (c) 2025 AT
+%
+%	Permission is hereby granted, free of charge, to any person obtaining a copy
+%	of this software and associated documentation files (the "Software"), to deal
+%	in the Software without restriction, including without limitation the rights
+%	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+%	copies of the Software, and to permit persons to whom the Software is
+%	furnished to do so, subject to the following conditions:
+%	
+%	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+%	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+%	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+%	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+%	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+%	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+%	THE SOFTWARE.
+%	
+%
+%-----------------------------------------------------------------------------------------------------------------------------------------------%
+
+%----------------------------------------------------------------------------------------
+%	DOCUMENT DEFINITION
+%----------------------------------------------------------------------------------------
+
+% article class because we want to fully customize the page and not use a cv template
+\documentclass[a4paper,12pt]{article}
+
+%----------------------------------------------------------------------------------------
+%	FONT
+%----------------------------------------------------------------------------------------
+
+% % fontspec allows you to use TTF/OTF fonts directly
+% \usepackage{fontspec}
+% \defaultfontfeatures{Ligatures=TeX}
+
+% % modified for ShareLaTeX use
+% \setmainfont[
+% SmallCapsFont = Fontin-SmallCaps.otf,
+% BoldFont = Fontin-Bold.otf,
+% ItalicFont = Fontin-Italic.otf
+% ]
+% {Fontin.otf}
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES
+%----------------------------------------------------------------------------------------
+
+\usepackage{url}
+\usepackage{parskip} 	
+
+%other packages for formatting
+\RequirePackage{color}
+\RequirePackage{graphicx}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage[scale=0.9]{geometry}
+
+%tabularx environment
+\usepackage{tabularx}
+
+%for lists within experience section
+\usepackage{enumitem}
+
+% centered version of 'X' col. type
+\newcolumntype{C}{>{\centering\arraybackslash}X} 
+
+%to prevent spillover of tabular into next pages
+\usepackage{supertabular}
+\usepackage{tabularx}
+\newlength{\fullcollw}
+\setlength{\fullcollw}{0.47\textwidth}
+
+%custom \section
+\usepackage{titlesec}				
+\usepackage{multicol}
+\usepackage{multirow}
+
+%CV Sections inspired by: 
+%http://stefano.italians.nl/archives/26
+\titleformat{\section}{\Large\scshape\raggedright}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{10pt}{10pt}
+
+%for publications
+\usepackage[style=authoryear,sorting=ynt, maxbibnames=2]{biblatex}
+
+%Setup hyperref package, and colours for links
+\usepackage[unicode, draft=false]{hyperref}
+\definecolor{linkcolour}{rgb}{0,0.2,0.6}
+\hypersetup{colorlinks,breaklinks,urlcolor=linkcolour,linkcolor=linkcolour}
+\addbibresource{citations.bib}
+\setlength\bibitemsep{1em}
+
+%for social icons
+\usepackage{fontawesome5}
+
+%----------------------------------------------------------------------------------------
+%	BEGIN DOCUMENT
+%----------------------------------------------------------------------------------------
+\begin{document}
+
+% non-numbered pages
+\pagestyle{empty} 
+
+%----------------------------------------------------------------------------------------
+%	TITLE
+%----------------------------------------------------------------------------------------
+
+\begin{tabularx}{\linewidth}{@{} C @{}}
+\Huge{Ashutosh Kumar Tejaswi} \\[7.5pt]
+\href{https://github.com/GithubUnknown}{\raisebox{-0.05\height}\faGithub\ GithubUnknown} \ $|$ \ 
+\href{https://linkedin.com/in/ash}{\raisebox{-0.05\height}\faLinkedin\ Linkedin} \ $|$ \ 
+\href{mailto:ash@gmail.com}{\raisebox{-0.05\height}\faEnvelope \ Ash@gmail.com} \ $|$ \ 
+\href{tel:+918955725145}{\raisebox{-0.05\height}\faMobile \ +917251455525} \\
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+% SUMMARY
+%----------------------------------------------------------------------------------------
+\section{Summary}
+Highly analytical Data Scientist with a robust foundation in AI/ML integration, statistical modeling, and intelligent system design. Proficient in Python for developing and deploying data-driven applications and machine learning models, leveraging expertise in scalable data architectures. Skilled in designing APIs for model inference, integrating diverse databases (e.g., MongoDB, MySQL, PostgreSQL), and deploying production-ready solutions on cloud platforms. Adept at creating interactive dashboards for data visualization and translating complex business challenges into actionable, data-driven insights. Collaborative professional with hands-on experience delivering robust and user-centric data solutions.
+\section{Projects}
+
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{Rooftop Solar Energy Generation Prediction} & \hfill \href{https://github.com/GithubUserUnknown/Rooftop-Solar-Energy}{Code Link} \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+    \begin{itemize}[nosep,after=\strut, leftmargin=1em, itemsep=3pt]
+        \item Developed a lightweight, scalable machine learning model for hourly rooftop solar output, showcasing proficiency in \textbf{data exploration, preprocessing, and model development}.
+        \item Outperformed deep learning baselines with an optimized model, achieving \textbf{RMSE = 0.0391} and \textbf{R² = 0.9617}.
+        \item Demonstrated proficiency in prototyping and testing by optimizing the model for deployment with a low average inference time (\textbf{6 ms}), enabling real-time integration.
+        \item Documented development process and methodologies by authoring an \textbf{IEEE-format research paper draft}, comparing multiple models (CatBoost, LSTM, Bi-LSTM, GRU, Transformer).
+    \end{itemize}
+    \end{minipage}
+} \\
+\end{tabularx}
+
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{Smriti AI -- Instant Chatbot Generator} & \hfill \href{https://github.com/GithubUserUnknown/Smriti}{Code Link} \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+    \begin{itemize}[nosep,after=\strut, leftmargin=1em, itemsep=3pt]
+        \item Built a platform to generate fully customized, low-code chatbots in under a minute, leveraging \textbf{Generative AI frameworks} for company- and product-aware conversations.
+        \item Enabled direct export of the chatbot as an \textbf{iframe script}, allowing users to embed a visually appealing, ready-to-deploy assistant on any website with minimal effort.
+        \item Applied advanced \textbf{Natural Language Processing (NLP)} for multi-format data ingestion (text, PDF), ensuring accurate knowledge transfer and high-quality model training.
+        \item Engineered a robust backend for efficient data parsing, cutting setup time by \textbf{over 90\%} and making deployment accessible to non-technical users.
+    \end{itemize}
+\end{minipage}
+} \\
+\end{tabularx}
+
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{RTVNR \& Location Tracking} & \hfill \href{https://github.com/GithubUserUnknown/RTVNR}{Code Link} \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+    \begin{itemize}[nosep,after=\strut, leftmargin=1em, itemsep=3pt]
+        \item Built a \textbf{Real-Time Vehicle Number Plate Recognition and Location Tracking} system to help law enforcement quickly trace suspicious vehicles.
+        \item Combined OpenCV, TensorFlow, and OCR to detect plates and store numbers with camera geolocation in a \textbf{MongoDB}-based backend for scalable, low-latency retrieval.
+        \item Designed a lightweight Django interface for live monitoring with minimal compute overhead, developed during my \textbf{second year}.
+    \end{itemize}
+\end{minipage}
+} \\
+
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+% EXPERIENCE
+%----------------------------------------------------------------------------------------
+\section{Work Experience}
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{AI Intern, Infosys} & \hfill Aug 2025 -- Oct 2025 \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+    \begin{itemize}[nosep,after=\strut, leftmargin=1em, itemsep=3pt]
+        \item Currently working with the AI team on Generative AI solutions involving Large Language Models (LLMs) and Natural Language Processing (NLP). 
+\end{itemize}
+
+    \end{minipage}
+}
+\end{tabularx}
+
+\vspace{5pt} % Adds a little space between entries
+
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{Trainee, IIIT Naya Raipur} & \hfill May 2025 -- July 2025 \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+    \begin{itemize}[nosep,after=\strut, leftmargin=1em, itemsep=3pt]
+        \item Led the development of 'SolarPredict,' a lightweight ML forecasting model, as the capstone project for the intensive training program, resulting in a submitted IEEE conference paper.
+    \end{itemize}
+    \end{minipage}
+}
+\end{tabularx}
+
+\vspace{5pt} % Adds a little space between entries
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{Intern, Krishna Vikash Group of Institutions (KVGI), Odisha} & \hfill Mar 2024 -- Apr 2025 \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+    \begin{itemize}[nosep,after=\strut, leftmargin=1em, itemsep=3pt]
+        \item Applied scalable backend design and API integration principles, later leveraged in deploying AI/ML models into interactive dashboards and real-time monitoring tools.
+        \item Enhanced proficiency in HTML, CSS, JavaScript, and MVC frameworks, strengthening the ability to integrate AI systems into production-ready applications.
+    \end{itemize}
+    \end{minipage}
+}
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+% EDUCATION
+%----------------------------------------------------------------------------------------
+\section{Education}
+\begin{tabularx}{\linewidth}{@{}l X@{}}	
+\textbf{Bachelor of Computer Science and Engineering} & \hfill Oct 2022 - Mar 2026 \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+    \begin{itemize}[leftmargin=0.6em, itemsep=3pt]
+      \item[--] Krishna's Vikash Institute of Technology
+    \end{itemize}
+    \end{minipage}
+}
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+% CERTIFICATIONS
+%----------------------------------------------------------------------------------------
+\section{Certifications}
+\begin{itemize}[nosep,after=\strut, leftmargin=1em, itemsep=3pt]
+\item Vocational Training Certificate in Python Basics, Data Science, Artificial Intelligence, Machine Learning, and Deep Learning – IIIT Naya Raipur
+    \item Infosys Principles of Generative AI Certification
+    \item Infosys Artificial Intelligence Primer Certification
+    \item Vocational Training Certificate in Machine Learning with Python – Rays IT and Design World
+    \item Google Cybersecurity Professional Certificate
+    
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+% SKILLS
+%----------------------------------------------------------------------------------------
+\section{Skills}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\textbf{Programming Languages} & Python, JavaScript, HTML, CSS \\
+\textbf{Frameworks \& Libraries} & TensorFlow, PyTorch, scikit-learn, React, Next.js, Django, OpenCV, Numpy, Pandas, Matplotlib, Seaborn \\
+\textbf{Domain Expertise} & Generative AI, Large Language Models (LLMs), Natural Language Processing (NLP), Computer Vision, Data Science, Data Structure, Cloud Computing \\
+\textbf{Databases \& Tools} & MongoDB, Git, MySQL, SQL, Postgres, Redis, MS Excel, Power BI \\
+\textbf{Soft Skills} & Problem-Solving, Communication, Adaptability, Collaboration, Creativity, Time Management \\
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+% PUBLICATIONS
+%----------------------------------------------------------------------------------------
+\section{Publications}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\textbf{Ash, john} & \textit{SolarPredict: A Lightweight Machine Learning Model Using Weather and Temporal Features}. Paper submitted to an IEEE INDICON conference, December 2025.
+\end{tabularx}
+
+\vfill
+\center{\footnotesize Last updated: \today}
+
+\end{document}

@@ -95,7 +95,7 @@ export default function SectionSidebar({ sections, onOptimizeSection, onSectionC
         </Collapsible>
 
         {/* Templates */}
-        <Collapsible open={openSections['Templates']} onOpenChange={() => toggleSection('Templates')}>
+        {/* <Collapsible open={openSections['Templates']} onOpenChange={() => toggleSection('Templates')}>
           <div className="p-4 border-b border-border">
             <CollapsibleTrigger className="flex items-center justify-between w-full text-left">
               <h3 className="font-semibold">Templates</h3>
@@ -118,7 +118,7 @@ export default function SectionSidebar({ sections, onOptimizeSection, onSectionC
               </Select>
             </CollapsibleContent>
           </div>
-        </Collapsible>
+        </Collapsible> */}
 
         {/* Version History */}
         <Collapsible open={openSections['Version History']} onOpenChange={() => toggleSection('Version History')}>

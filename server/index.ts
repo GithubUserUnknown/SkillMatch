@@ -78,10 +78,11 @@ app.use((req, res, next) => {
 // })();
 
 let port = parseInt(process.env.PORT || '5000', 10);
+const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
 
 function listen() {
-  server.listen({ port, host: "127.0.0.1" }, () => {
-    console.log(`✅ Server listening on http://127.0.0.1:${port}`);
+  server.listen({ port, host }, () => {
+    console.log(`✅ Server listening on http://${host}:${port}`);
   });
 }
 

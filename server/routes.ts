@@ -4,11 +4,14 @@ import { storage } from "./storage";
 import multer from "multer";
 import * as path from "path";
 import { optimizationRequestSchema, batchOptimizationRequestSchema } from "@shared/schema";
-import { optimizeResumeSection, batchOptimizeResume } from "./services/gemini";
+import { optimizeResumeSection, batchOptimizeResume, optimizeFullResume } from "./services/gemini";
 import { compileLatex, extractSections, updateSectionInLatex } from "./services/latex";
 import { parsePDFResume, parseDOCXResume, convertToLatex } from "./services/parser";
 import * as fs from "fs/promises";
 import * as skillmatch from "./services/skillmatch";
+import * as chatbot from "./services/chatbot";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const upload = multer({
   dest: 'uploads/',
@@ -176,6 +179,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download as DOC (convert LaTeX to DOCX using pandoc)
+  app.get("/api/resumes/:id/download-doc", async (req, res) => {
+    try {
+      const resume = await storage.getResume(req.params.id);
+      if (!resume || !resume.latexContent) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      const tempDir = path.join(process.cwd(), 'server', 'public', 'temp');
+      await fs.mkdir(tempDir, { recursive: true });
+
+      // Create unique filenames to avoid conflicts
+      const timestamp = Date.now();
+      const texPath = path.join(tempDir, `resume_${timestamp}.tex`);
+      const docxPath = path.join(tempDir, `resume_${timestamp}.docx`);
+
+      try {
+        // Write LaTeX content to temp file
+        await fs.writeFile(texPath, resume.latexContent);
+
+        const execAsync = promisify(exec);
+
+        // Try to find pandoc in common installation paths
+        const possiblePandocPaths = [
+          'pandoc', // System PATH
+          'C:\\Program Files\\Pandoc\\pandoc.exe',
+          'C:\\Program Files (x86)\\Pandoc\\pandoc.exe',
+          path.join(process.env.LOCALAPPDATA || '', 'Pandoc', 'pandoc.exe'),
+          path.join(process.env.USERPROFILE || '', 'AppData', 'Local', 'Pandoc', 'pandoc.exe'),
+        ];
+
+        let pandocCommand = 'pandoc';
+        let pandocFound = false;
+
+        // Try each path until we find one that works
+        for (const pandocPath of possiblePandocPaths) {
+          try {
+            await execAsync(`"${pandocPath}" --version`);
+            pandocCommand = pandocPath;
+            pandocFound = true;
+            console.log(`Found pandoc at: ${pandocPath}`);
+            break;
+          } catch (err) {
+            // Continue to next path
+          }
+        }
+
+        if (!pandocFound) {
+          throw new Error('Pandoc not found. Please install pandoc from https://pandoc.org/installing.html and restart your terminal/computer.');
+        }
+
+        // Convert LaTeX to DOCX using pandoc
+        console.log('Converting LaTeX to DOCX...');
+        await execAsync(`"${pandocCommand}" "${texPath}" -o "${docxPath}" --from=latex --to=docx`);
+        console.log('Conversion complete');
+
+        // Check if file was created
+        const fileExists = await fs.access(docxPath).then(() => true).catch(() => false);
+        if (!fileExists) {
+          throw new Error('DOCX file was not created');
+        }
+
+        // Send the DOCX file
+        res.download(docxPath, `${resume.name}.docx`, async (downloadErr) => {
+          // Clean up temp files after download
+          try {
+            await fs.unlink(texPath).catch(() => {});
+            await fs.unlink(docxPath).catch(() => {});
+          } catch (cleanupError) {
+            console.error('Cleanup error:', cleanupError);
+          }
+
+          if (downloadErr) {
+            console.error('Download error:', downloadErr);
+          }
+        });
+      } catch (conversionError) {
+        // Clean up on error
+        await fs.unlink(texPath).catch(() => {});
+        await fs.unlink(docxPath).catch(() => {});
+
+        console.error('Conversion error:', conversionError);
+        res.status(500).json({
+          error: "Failed to convert to DOCX. Please ensure pandoc is installed.",
+          details: conversionError instanceof Error ? conversionError.message : String(conversionError)
+        });
+      }
+    } catch (error) {
+      console.error('Download DOC error:', error);
+      res.status(500).json({ error: "Failed to download as DOC" });
+    }
+  });
+
   // Optimize a specific section
   app.post("/api/resumes/:id/optimize-section", async (req, res) => {
     try {
@@ -186,10 +282,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Resume not found" });
       }
 
+      // Get API key from request body
+      const apiKey = req.body.apiKey;
+      if (!apiKey) {
+        return res.status(400).json({ error: "API key is required" });
+      }
+
       const result = await optimizeResumeSection(
         validatedData.section,
         validatedData.currentContent,
         validatedData.jobDescription,
+        apiKey,
         validatedData.additionalDetails
       );
 
@@ -276,15 +379,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/batch-optimize", async (req, res) => {
     try {
       const validatedData = batchOptimizationRequestSchema.parse(req.body);
-      
+
+      // Get API key from request body
+      const apiKey = req.body.apiKey;
+      if (!apiKey) {
+        return res.status(400).json({ error: "API key is required" });
+      }
+
       const result = await batchOptimizeResume(
         validatedData.sections,
-        validatedData.jobDescription
+        validatedData.jobDescription,
+        apiKey
       );
 
       res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to batch optimize resume" });
+      console.error('Batch optimize error:', error);
+      res.status(500).json({
+        error: "Failed to batch optimize resume",
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Full resume optimization (divides into 3 sections)
+  app.post("/api/optimize-full-resume", async (req, res) => {
+    try {
+      const { latexContent, jobDescription, apiKey } = req.body;
+
+      if (!latexContent || !jobDescription) {
+        return res.status(400).json({ error: "LaTeX content and job description are required" });
+      }
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "API key is required" });
+      }
+
+      const result = await optimizeFullResume(
+        latexContent,
+        jobDescription,
+        apiKey
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error('Full resume optimization error:', error);
+      res.status(500).json({
+        error: "Failed to optimize full resume",
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
@@ -346,6 +489,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Recommendations error:", error);
       res.status(500).json({ error: "Failed to get recommendations" });
+    }
+  });
+
+  // Generate AI-powered project ideas
+  app.post("/api/ai/project-ideas", async (req, res) => {
+    try {
+      const { jobDescription, techStack, skillGaps, apiKey } = req.body;
+
+      if (!jobDescription || !techStack) {
+        return res.status(400).json({ error: "Job description and tech stack are required" });
+      }
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "API key is required" });
+      }
+
+      console.log("Generating project ideas for:", {
+        jdLength: jobDescription.length,
+        techStackCount: techStack.length,
+        skillGapsCount: skillGaps?.length || 0
+      });
+
+      const { generateProjectIdeas } = await import("./services/gemini");
+      const result = await generateProjectIdeas(jobDescription, techStack, apiKey, skillGaps);
+
+      console.log("Project ideas generated successfully:", result.projects.length);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Project ideas generation error:", error);
+      res.status(500).json({
+        error: "Failed to generate project ideas",
+        details: error.message
+      });
+    }
+  });
+
+  // Generate AI-powered certificate recommendations
+  app.post("/api/ai/certificate-recommendations", async (req, res) => {
+    try {
+      const { jobDescription, skillGaps, apiKey } = req.body;
+
+      if (!jobDescription || !skillGaps) {
+        return res.status(400).json({ error: "Job description and skill gaps are required" });
+      }
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "API key is required" });
+      }
+
+      console.log("Generating certificate recommendations for:", {
+        jdLength: jobDescription.length,
+        skillGapsCount: skillGaps.length
+      });
+
+      const { generateCertificateRecommendations } = await import("./services/gemini");
+      const result = await generateCertificateRecommendations(jobDescription, skillGaps, apiKey);
+
+      console.log("Certificate recommendations generated successfully:", result.certificates.length);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Certificate recommendations error:", error);
+      res.status(500).json({
+        error: "Failed to generate certificate recommendations",
+        details: error.message
+      });
+    }
+  });
+
+  // ============================================
+  // CHATBOT API ROUTES
+  // ============================================
+
+  // Send a chat message and get AI response
+  app.post("/api/chatbot/message", async (req, res) => {
+    try {
+      const { message, persona, conversationHistory, userContext, apiKey } = req.body;
+
+      if (!message || !persona) {
+        return res.status(400).json({ error: "Message and persona are required" });
+      }
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "API key is required" });
+      }
+
+      console.log("Generating chat response:", {
+        messageLength: message.length,
+        persona,
+        historyLength: conversationHistory?.length || 0,
+        hasContext: !!userContext
+      });
+
+      const response = await chatbot.generateChatResponse({
+        message,
+        persona: persona as chatbot.PersonaType,
+        conversationHistory: conversationHistory || [],
+        userContext: userContext || {}
+      }, apiKey);
+
+      res.json(response);
+    } catch (error: any) {
+      console.error("Chat message error:", error);
+      res.status(500).json({
+        error: "Failed to generate chat response",
+        details: error.message
+      });
+    }
+  });
+
+  // Generate onboarding questions based on user goal
+  app.post("/api/chatbot/onboarding", async (req, res) => {
+    try {
+      const { goal, apiKey } = req.body;
+
+      if (!goal) {
+        return res.status(400).json({ error: "Goal is required" });
+      }
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "API key is required" });
+      }
+
+      const questions = await chatbot.generateOnboardingQuestions(goal, apiKey);
+      res.json({ questions });
+    } catch (error: any) {
+      console.error("Onboarding questions error:", error);
+      res.status(500).json({
+        error: "Failed to generate onboarding questions",
+        details: error.message
+      });
+    }
+  });
+
+  // Generate conversation title from first message
+  app.post("/api/chatbot/generate-title", async (req, res) => {
+    try {
+      const { firstMessage, apiKey } = req.body;
+
+      if (!firstMessage) {
+        return res.status(400).json({ error: "First message is required" });
+      }
+
+      if (!apiKey) {
+        return res.status(400).json({ error: "API key is required" });
+      }
+
+      const title = await chatbot.generateConversationTitle(firstMessage, apiKey);
+      res.json({ title });
+    } catch (error: any) {
+      console.error("Title generation error:", error);
+      res.status(500).json({
+        error: "Failed to generate title",
+        details: error.message
+      });
     }
   });
 

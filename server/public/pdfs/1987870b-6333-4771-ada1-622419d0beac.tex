@@ -1,0 +1,194 @@
+%-----------------------------------------------------------------------------------------------------------------------------------------------%
+%	The MIT License (MIT)
+%
+%	Copyright (c) 2025 YourApp
+%
+%	Permission is hereby granted, free of charge, to any person obtaining a copy
+%	of this software and associated documentation files (the "Software"), to deal
+%	in the Software without restriction, including without limitation the rights
+%	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+%	copies of the Software, and to permit persons to whom the Software is
+%	furnished to do so, subject to the following conditions:
+%	
+%	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+%	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+%	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+%	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+%	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+%	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+%	THE SOFTWARE.
+%-----------------------------------------------------------------------------------------------------------------------------------------------%
+
+\documentclass[a4paper,12pt]{article}
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES
+%----------------------------------------------------------------------------------------
+\usepackage{url}
+\usepackage{parskip}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage[scale=0.9]{geometry}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{supertabular}
+\usepackage{titlesec}
+\usepackage{multicol}
+\usepackage{multirow}
+\usepackage[style=authoryear,sorting=ynt,maxbibnames=2]{biblatex}
+\usepackage[unicode,draft=false]{hyperref}
+\usepackage{fontawesome5}
+
+%----------------------------------------------------------------------------------------
+%	STYLE DEFINITIONS
+%----------------------------------------------------------------------------------------
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\definecolor{linkcolour}{rgb}{0,0.2,0.6}
+\hypersetup{colorlinks,breaklinks,urlcolor=linkcolour,linkcolor=linkcolour}
+\titleformat{\section}{\Large\scshape\raggedright}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{10pt}{10pt}
+\setlength\bibitemsep{1em}
+
+%----------------------------------------------------------------------------------------
+%	BEGIN DOCUMENT
+%----------------------------------------------------------------------------------------
+\begin{document}
+\pagestyle{empty}
+
+%----------------------------------------------------------------------------------------
+%	TITLE
+%----------------------------------------------------------------------------------------
+\begin{tabularx}{\linewidth}{@{}C@{}}
+\Huge{John Doe} \\[7.5pt]
+\href{https://github.com/johndoe}{\raisebox{-0.05\height}\faGithub\ johndoe} \ $|$ \ 
+\href{https://linkedin.com/in/johndoe}{\raisebox{-0.05\height}\faLinkedin\ linkedin.com/in/johndoe} \ $|$ \ 
+\href{mailto:johndoe@example.com}{\raisebox{-0.05\height}\faEnvelope\ johndoe@example.com} \ $|$ \ 
+\href{tel:+10000000000}{\raisebox{-0.05\height}\faMobile\ +1 000 000 0000} \\
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+%	SUMMARY
+%----------------------------------------------------------------------------------------
+\section{Summary}
+Full Stack Developer passionate about building intelligent web applications and integrating modern AI solutions. Skilled in JavaScript (React, Next.js), Python (Django, Flask), and scalable backend architectures. Strong in data-driven design, API development, and cloud deployment.
+
+%----------------------------------------------------------------------------------------
+%	PROJECTS
+%----------------------------------------------------------------------------------------
+\section{Projects}
+
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{AI Resume Analyzer} & \hfill \href{https://github.com/mockuser/ai-resume-analyzer}{Code Link} \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+\begin{itemize}[nosep,after=\strut,leftmargin=1em,itemsep=3pt]
+    \item Built an interactive resume evaluation platform powered by LLMs, analyzing job fit and skill gaps.
+    \item Implemented real-time feedback and skill extraction using the Gemini API and React frontend.
+\end{itemize}
+\end{minipage}
+} \\
+\end{tabularx}
+
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{Weather Insight Dashboard} & \hfill \href{https://github.com/mockuser/weather-dashboard}{Code Link} \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+\begin{itemize}[nosep,after=\strut,leftmargin=1em,itemsep=3pt]
+    \item Developed a real-time weather forecasting dashboard using Django, Chart.js, and Open-Meteo API.
+    \item Integrated caching and responsive design to reduce load time by 40\%.
+\end{itemize}
+\end{minipage}
+} \\
+\end{tabularx}
+
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{VisionTrack} & \hfill \href{https://github.com/mockuser/visiontrack}{Code Link} \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+\begin{itemize}[nosep,after=\strut,leftmargin=1em,itemsep=3pt]
+    \item Designed a real-time vehicle tracking system using OpenCV and TensorFlow for plate recognition.
+    \item Integrated geolocation mapping and analytics dashboard with MongoDB backend.
+\end{itemize}
+\end{minipage}
+} \\
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+%	EXPERIENCE
+%----------------------------------------------------------------------------------------
+\section{Work Experience}
+
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{Software Engineer Intern, TechNova} & \hfill May 2025 -- Present \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+\begin{itemize}[nosep,after=\strut,leftmargin=1em,itemsep=3pt]
+    \item Assisted in developing AI-driven internal tools and microservices for data processing.
+    \item Collaborated in a cross-functional team to deploy models on cloud environments.
+\end{itemize}
+\end{minipage}
+} \\
+\end{tabularx}
+
+\vspace{5pt}
+
+\begin{tabularx}{\linewidth}{ @{}l r@{} }
+\textbf{Machine Learning Trainee, DataSphere Labs} & \hfill Jan 2025 -- Apr 2025 \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+\begin{itemize}[nosep,after=\strut,leftmargin=1em,itemsep=3pt]
+    \item Developed ML models for solar energy prediction using CatBoost and LSTM architectures.
+    \item Created data pipelines and visualization dashboards for model evaluation.
+\end{itemize}
+\end{minipage}
+} \\
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+%	EDUCATION
+%----------------------------------------------------------------------------------------
+\section{Education}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\textbf{Bachelor of Technology in Computer Science and Engineering} & \hfill 2022 -- 2026 \\[3.75pt]
+\multicolumn{2}{@{}X@{}}{
+\begin{minipage}[t]{\linewidth}
+\begin{itemize}[leftmargin=0.6em,itemsep=3pt]
+    \item[--] ABC Institute of Technology
+\end{itemize}
+\end{minipage}
+}
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+%	CERTIFICATIONS
+%----------------------------------------------------------------------------------------
+\section{Certifications}
+\begin{itemize}[nosep,after=\strut,leftmargin=1em,itemsep=3pt]
+    \item Google Cloud Certified: Associate Cloud Engineer
+    \item Coursera: Machine Learning by Stanford University
+    \item Microsoft Azure Fundamentals (AZ-900)
+    \item TensorFlow Developer Certificate
+\end{itemize}
+
+%----------------------------------------------------------------------------------------
+%	SKILLS
+%----------------------------------------------------------------------------------------
+\section{Skills}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\textbf{Programming Languages} & Python, JavaScript, HTML, CSS, SQL \\
+\textbf{Frameworks \& Libraries} & React, Next.js, Django, Flask, TensorFlow, scikit-learn \\
+\textbf{Databases \& Tools} & MongoDB, PostgreSQL, MySQL, Git, Docker, Power BI \\
+\textbf{Domains} & Full Stack Development, Machine Learning, Cloud Deployment, Generative AI \\
+\textbf{Soft Skills} & Problem Solving, Collaboration, Adaptability, Leadership \\
+\end{tabularx}
+
+%----------------------------------------------------------------------------------------
+%	PUBLICATIONS
+%----------------------------------------------------------------------------------------
+\section{Publications}
+\noindent
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.2\linewidth} X@{}}
+\textbf{Doe, J.} & \textit{PredictAI: Leveraging Machine Learning for Forecasting Systems}. Submitted to IEEE Conference on AI Applications, 2025. \\
+\end{tabularx}
+

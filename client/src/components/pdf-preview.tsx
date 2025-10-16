@@ -1,6 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Download, Maximize2, FileText, Clock, AlertCircle } from "lucide-react";
+import { Download, Maximize2, FileText, Clock, AlertCircle, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 
 interface PdfPreviewProps {
   resumeId: string | null;
@@ -17,11 +24,17 @@ interface PdfPreviewProps {
 
 export default function PdfPreview({ resumeId, onDownload, pdfUrl, compilationError, onErrorLineClick }: PdfPreviewProps) {
   const [pdfKey, setPdfKey] = useState(0);
+  const { toast } = useToast();
 
   // Force refresh when resumeId or pdfUrl changes
   useEffect(() => {
     setPdfKey(prev => prev + 1);
   }, [resumeId, pdfUrl]);
+
+  const handleDownloadDoc = () => {
+    if (!resumeId) return;
+    window.open(`/api/resumes/${resumeId}/download-doc`, '_blank');
+  };
 
   return (
     <div className="h-full flex flex-col bg-muted">
@@ -30,16 +43,35 @@ export default function PdfPreview({ resumeId, onDownload, pdfUrl, compilationEr
           <FileText className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">PDF Preview</span>
         </div>
-        <Button
-          variant="default"
-          size="sm"
-          onClick={onDownload}
-          disabled={!resumeId || !!compilationError}
-          data-testid="download-pdf"
-        >
-          <Download className="h-3 w-3 mr-1" />
-          Download PDF
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="default"
+              size="sm"
+              disabled={!resumeId || !!compilationError}
+              data-testid="download-menu"
+            >
+              <Download className="h-3 w-3 mr-1" />
+              Download
+              <ChevronDown className="h-3 w-3 ml-1" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onDownload}>
+              <FileText className="h-4 w-4 mr-2" />
+              Download as PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => {
+              toast({
+                title: "In Development",
+                description: "This feature is currently in development.",
+              });
+            }}>
+              <FileText className="h-4 w-4 mr-2 disabled:opacity-50" />
+              Download as DOC (ATS-friendly)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto">
@@ -117,10 +149,10 @@ export default function PdfPreview({ resumeId, onDownload, pdfUrl, compilationEr
             />
           ) : (
             <div className="h-full w-full bg-white flex items-center justify-center">
-              <div className="text-center text-gray-500">
+              <div className="text-center text-gray-500 animate-pulse">
                 <FileText className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg font-medium mb-2">No PDF Available</p>
-                <p>Press Ctrl+S to compile your LaTeX code and generate a PDF preview</p>
+                <p className="text-lg font-medium mb-2">Generating PDF...</p>
+                <p>Your resume is being compiled. This may take a moment.</p>
               </div>
             </div>
           )}

@@ -7,7 +7,7 @@ import { CloudUpload, FileText, Check } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface QuickUploadProps {
-  onUploadSuccess: (sections: Array<{ name: string; content: string }>) => void;
+  onUploadSuccess: (sections: Array<{ name: string; content: string }>, latexContent: string) => void;
 }
 
 export default function QuickUpload({ onUploadSuccess }: QuickUploadProps) {
@@ -33,7 +33,7 @@ export default function QuickUpload({ onUploadSuccess }: QuickUploadProps) {
       return response.json();
     },
     onSuccess: (data) => {
-      onUploadSuccess(data.sections);
+      onUploadSuccess(data.sections, data.latexContent);
       setUploadedFile(data.sections[0]?.name || 'Resume');
       toast({
         title: "Resume uploaded successfully",

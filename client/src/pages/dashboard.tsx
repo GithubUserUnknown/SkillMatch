@@ -1,26 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { useLocation } from 'wouter';
-import { 
-  FileText, 
-  Edit, 
-  Download, 
-  Copy, 
-  Trash2, 
-  Plus, 
-  Search, 
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import Navbar from '@/components/Navbar';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import {
+  Download,
+  Copy,
+  Trash2,
+  Plus,
+  Search,
   MoreVertical,
   Calendar,
   TrendingUp,
   Eye,
+  FileText,
   Zap,
-  Target,
-  User,
-  Moon
+  Edit
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -42,9 +44,12 @@ interface Resume {
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'draft' | 'completed' | 'optimized'>('all');
-  
+  const [loading, setLoading] = useState(true);
+
   const [resumes, setResumes] = useState<Resume[]>([
     {
       id: '1',
@@ -88,6 +93,56 @@ export default function Dashboard() {
     }
   ]);
 
+  // Load resumes from Supabase
+  useEffect(() => {
+    const loadResumes = async () => {
+      if (!user) {
+        // If no user, just use mock data and stop loading
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('resumes')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false });
+
+        if (error) {
+          // If table doesn't exist or other error, just use mock data
+          console.warn('Supabase error (using mock data):', error);
+          setLoading(false);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const formattedResumes: Resume[] = data.map(resume => ({
+            id: resume.id,
+            title: resume.title,
+            matchScore: resume.match_score || 0,
+            lastJobDescription: '', // We can add this field to the database if needed
+            lastUpdated: new Date(resume.updated_at).toISOString().split('T')[0],
+            status: resume.status as 'draft' | 'completed' | 'optimized',
+            downloads: resume.downloads,
+            versions: 1 // We can track versions if needed
+          }));
+          setResumes(formattedResumes);
+        } else {
+          // No resumes in database, keep mock data for demo
+          console.log('No resumes found in Supabase, using mock data');
+        }
+      } catch (error: any) {
+        console.error('Error loading resumes:', error);
+        // Don't show error toast, just use mock data
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadResumes();
+  }, [user]);
+
   const filteredResumes = resumes.filter(resume => {
     const matchesSearch = resume.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          resume.lastJobDescription.toLowerCase().includes(searchTerm.toLowerCase());
@@ -126,72 +181,62 @@ export default function Dashboard() {
     }
   };
 
-  const deleteResume = (resumeId: string) => {
+  const deleteResume = async (resumeId: string) => {
+    // Delete from local state
     setResumes(prev => prev.filter(r => r.id !== resumeId));
+
+    // If user is logged in, also delete from Supabase
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from('resumes')
+          .delete()
+          .eq('id', resumeId)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.warn('Error deleting from Supabase:', error);
+          // Don't show error, local delete already happened
+        }
+      } catch (error: any) {
+        console.error('Error deleting resume:', error);
+        // Don't show error, local delete already happened
+      }
+    }
+
+    toast({
+      title: 'Resume deleted',
+      description: 'The resume has been deleted successfully.'
+    });
   };
 
   const stats = {
     totalResumes: resumes.length,
     totalDownloads: resumes.reduce((sum, r) => sum + r.downloads, 0),
-    avgMatchScore: Math.round(resumes.filter(r => r.matchScore > 0).reduce((sum, r) => sum + r.matchScore, 0) / resumes.filter(r => r.matchScore > 0).length),
+    avgMatchScore: Math.round(resumes.filter(r => r.matchScore > 0).reduce((sum, r) => sum + r.matchScore, 0) / resumes.filter(r => r.matchScore > 0).length) || 0,
     optimizedResumes: resumes.filter(r => r.status === 'optimized').length
   };
 
-  return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <FileText className="text-primary text-xl" />
-              <h1 className="text-xl font-bold">SkillMatch Resume Maker</h1>
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <div className="h-screen flex flex-col bg-background overflow-hidden">
+          <Navbar currentPage="dashboard" />
+          <main className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading resumes...</p>
             </div>
-            <nav className="flex space-x-1">
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation("/")}
-              >
-                <FileText className="h-4 w-4 mr-2" />Home
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation("/resume-editor")}
-              >
-                <Edit className="h-4 w-4 mr-2" />Edit Resume
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation("/quick-update")}
-              >
-                <Zap className="h-4 w-4 mr-2" />Quick Update
-              </Button>
-              <Button 
-                className="bg-primary text-primary-foreground"
-              >
-                <Target className="h-4 w-4 mr-2" />Dashboard
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation("/profile")}
-              >
-                <User className="h-4 w-4 mr-2" />Profile
-              </Button>
-            </nav>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon">
-              <Moon className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <span className="text-sm font-medium">John Doe</span>
-            </Button>
-          </div>
+          </main>
         </div>
-      </header>
+      </ProtectedRoute>
+    );
+  }
+
+  return (
+    <ProtectedRoute>
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        <Navbar currentPage="dashboard" />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto p-8">
@@ -463,6 +508,7 @@ export default function Dashboard() {
         </div>
       </main>
     </div>
+    </ProtectedRoute>
   );
 }
 

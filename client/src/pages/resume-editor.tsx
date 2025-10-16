@@ -7,6 +7,12 @@ interface ResumeSection {
   endLine: number;
 }
 
+interface SavedVersion {
+  name: string;
+  content: string;
+  timestamp: string;
+}
+
 // Function to extract sections from LaTeX content (client-side version)
 function extractSectionsFromLatex(latexContent: string): ResumeSection[] {
   const lines = latexContent.split('\n');
@@ -72,9 +78,18 @@ import LatexEditor, { LatexEditorRef } from "@/components/latex-editor";
 import PdfPreview from "@/components/pdf-preview";
 import OptimizeModal from "@/components/optimize-modal";
 import DiffViewModal from "@/components/diff-view-modal";
-import { Play, Moon, User, FileText, Edit, Zap, Target } from "lucide-react";
-import { defaultLatexTemplate } from "@/lib/latex-templates";
+import TemplateSelector from "@/components/template-selector";
+import ApiKeyDialog from "@/components/api-key-dialog";
+import Navbar from "@/components/Navbar";
+import { Play, FileText, History, Palette } from "lucide-react";
+import { defaultTemplate, templates } from "@/lib/template-loader";
 import { apiRequest } from "@/lib/queryClient";
+import type { Template } from "@/lib/template-loader";
+import { hasValidApiKey, getApiKey } from "@/lib/api-key-manager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 export default function ResumeEditor() {
   const [, setLocation] = useLocation();
@@ -82,12 +97,18 @@ export default function ResumeEditor() {
   const queryClient = useQueryClient();
 
   const [currentResumeId, setCurrentResumeId] = useState<string | null>(null);
-  const [latexContent, setLatexContent] = useState(defaultLatexTemplate);
+  const [latexContent, setLatexContent] = useState(defaultTemplate.content);
   const [showOptimizeModal, setShowOptimizeModal] = useState(false);
   const [showDiffModal, setShowDiffModal] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [currentTemplateId, setCurrentTemplateId] = useState('modern');
   const [selectedSection, setSelectedSection] = useState<string>("");
+  const [sidebarTab, setSidebarTab] = useState<'sections' | 'templates' | 'versions'>('sections');
+  const [savedVersions, setSavedVersions] = useState<SavedVersion[]>([]);
   const isSavingRef = useRef(false);
   const editorRef = useRef<LatexEditorRef>(null);
+  const hasCompiledOnLoad = useRef(false);
   const [optimizationResult, setOptimizationResult] = useState<{
     original: string;
     optimized: string;
@@ -104,6 +125,68 @@ export default function ResumeEditor() {
     errorMessage?: string;
     logs?: string;
   } | null>(null);
+
+  // Cache key for localStorage
+  const CACHE_KEY = 'skillmatch_latex_cache';
+  const CACHE_EXPIRY_DAYS = 30;
+
+  // Load cached content on mount
+  useEffect(() => {
+    const loadCachedContent = () => {
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { content, timestamp } = JSON.parse(cached);
+          const now = new Date().getTime();
+          const expiryTime = CACHE_EXPIRY_DAYS * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+
+          // Check if cache is still valid
+          if (now - timestamp < expiryTime) {
+            setLatexContent(content);
+            console.log('Loaded LaTeX content from cache');
+          } else {
+            // Cache expired, remove it
+            localStorage.removeItem(CACHE_KEY);
+            console.log('Cache expired, removed');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading cached content:', error);
+      }
+    };
+
+    loadCachedContent();
+  }, []);
+
+  // Load saved versions from localStorage
+  useEffect(() => {
+    try {
+      const versions = localStorage.getItem('latex_versions');
+      if (versions) {
+        setSavedVersions(JSON.parse(versions));
+      }
+    } catch (error) {
+      console.error('Error loading saved versions:', error);
+    }
+  }, []);
+
+  // Save to cache whenever content changes (debounced)
+  useEffect(() => {
+    const saveToCacheDebounced = setTimeout(() => {
+      try {
+        const cacheData = {
+          content: latexContent,
+          timestamp: new Date().getTime()
+        };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+        console.log('Saved LaTeX content to cache');
+      } catch (error) {
+        console.error('Error saving to cache:', error);
+      }
+    }, 1000); // Debounce for 1 second
+
+    return () => clearTimeout(saveToCacheDebounced);
+  }, [latexContent]);
 
   // Fetch resumes
   const { data: resumes = [] } = useQuery({
@@ -129,6 +212,20 @@ export default function ResumeEditor() {
     },
   });
 
+  // Helper function to update cache
+  const updateCache = (content: string) => {
+    try {
+      const cacheData = {
+        content: content,
+        timestamp: new Date().getTime()
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+      console.log('Cache updated on save');
+    } catch (error) {
+      console.error('Error updating cache:', error);
+    }
+  };
+
   // Update resume mutation
   const updateResumeMutation = useMutation({
     mutationFn: async (data: { id: string; latexContent: string }) => {
@@ -137,7 +234,9 @@ export default function ResumeEditor() {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Update cache with the saved content
+      updateCache(variables.latexContent);
       queryClient.invalidateQueries({ queryKey: ["/api/resumes", currentResumeId] });
     },
   });
@@ -196,10 +295,16 @@ export default function ResumeEditor() {
       jobDescription: string;
       additionalDetails?: string;
     }) => {
+      // Get API key
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        throw new Error("API key is required");
+      }
+
       const response = await apiRequest(
-        "POST", 
-        `/api/resumes/${currentResumeId}/optimize-section`, 
-        data
+        "POST",
+        `/api/resumes/${currentResumeId}/optimize-section`,
+        { ...data, apiKey }
       );
       return response.json();
     },
@@ -237,7 +342,7 @@ export default function ResumeEditor() {
     if (Array.isArray(resumes) && resumes.length === 0 && !createResumeMutation.isPending) {
       createResumeMutation.mutate({
         name: "My Resume",
-        latexContent: defaultLatexTemplate,
+        latexContent: defaultTemplate.content,
         template: "modern",
       });
     } else if (Array.isArray(resumes) && resumes.length > 0 && !currentResumeId) {
@@ -252,6 +357,8 @@ export default function ResumeEditor() {
       // Extract sections from the loaded content
       const sections = extractSectionsFromLatex(currentResume.latexContent);
       setCurrentSections(sections);
+      // Reset compilation flag when resume changes
+      hasCompiledOnLoad.current = false;
     }
   }, [currentResume?.latexContent, currentResumeId]);
 
@@ -336,7 +443,25 @@ export default function ResumeEditor() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [currentResumeId, currentResume, updateResumeMutation.isPending, compileMutation.isPending]);
 
+  // Compile on first load
+  useEffect(() => {
+    if (currentResumeId && currentResume && !hasCompiledOnLoad.current) {
+      if (!compileMutation.isPending && !updateResumeMutation.isPending) {
+        // Auto-compile the resume on first load
+        compileMutation.mutate(currentResumeId);
+        hasCompiledOnLoad.current = true;
+      }
+    }
+  }, [currentResumeId, currentResume, compileMutation.isPending, updateResumeMutation.isPending]);
+
+
   const handleOptimizeSection = (sectionName: string) => {
+    // Check if API key is set
+    if (!hasValidApiKey()) {
+      setShowApiKeyDialog(true);
+      return;
+    }
+
     setSelectedSection(sectionName);
     setShowOptimizeModal(true);
   };
@@ -370,12 +495,12 @@ export default function ResumeEditor() {
     });
   };
 
-  const handleApplyOptimization = () => {
+  const handleApplyOptimization = (editedContent?: string) => {
     if (!optimizationResult) return;
 
     applyOptimizationMutation.mutate({
       sectionName: selectedSection,
-      optimizedContent: optimizationResult.optimized,
+      optimizedContent: editedContent || optimizationResult.optimized,
     });
   };
 
@@ -394,108 +519,189 @@ export default function ResumeEditor() {
     }
   };
 
+  const handleSelectTemplate = (template: Template) => {
+    setLatexContent(template.content);
+    setCurrentTemplateId(template.id);
+  };
+
+  const handleQuickSelectTemplate = (template: Template) => {
+    setLatexContent(template.content);
+    setCurrentTemplateId(template.id);
+    toast({ title: "Template applied", description: `${template.name} template has been applied` });
+  };
+
+  const handleRestoreVersion = (version: SavedVersion) => {
+    setLatexContent(version.content);
+    toast({
+      title: "Version restored",
+      description: `Restored version: ${version.name}`
+    });
+  };
+
+  const handleDeleteVersion = (timestamp: string) => {
+    const updatedVersions = savedVersions.filter(v => v.timestamp !== timestamp);
+    setSavedVersions(updatedVersions);
+    localStorage.setItem('latex_versions', JSON.stringify(updatedVersions));
+    toast({ title: "Version deleted" });
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <FileText className="text-primary text-xl" />
-              <h1 className="text-xl font-bold">SkillMatch Resume Maker</h1>
-            </div>
-            <nav className="flex space-x-1">
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/")}
-              >
-                <FileText className="h-4 w-4 mr-2" />Home
-              </Button>
-              <Button
-                className="bg-primary text-primary-foreground"
-                data-testid="edit-mode-btn"
-              >
-                <Edit className="h-4 w-4 mr-2" />Edit Resume
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/quick-update")}
-                data-testid="quick-mode-btn"
-              >
-                <Zap className="h-4 w-4 mr-2" />Quick Update
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/dashboard")}
-              >
-                <Target className="h-4 w-4 mr-2" />Dashboard
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setLocation("/profile")}
-              >
-                <User className="h-4 w-4 mr-2" />Profile
-              </Button>
-            </nav>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon">
-              <Moon className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <span className="text-sm font-medium">John Doe</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Navbar currentPage="resume-editor" />
 
       {/* Main Content */}
       <main className="flex-1 flex overflow-hidden">
-        {/* Resume Sections - 20% width */}
-        <div className="w-1/5 min-w-0">
-          <SectionSidebar
-            sections={currentSections}
-            onOptimizeSection={handleOptimizeSection}
-            onSectionClick={handleSectionClick}
-            data-testid="section-sidebar"
-          />
+        {/* Left Sidebar with Tabs - 20% width */}
+        <div className="w-1/6 min-w-0 border-r border-border bg-card flex flex-col">
+          <Tabs value={sidebarTab} onValueChange={(value) => setSidebarTab(value as any)} className="flex-1 flex flex-col">
+            <TabsList className="grid w-full grid-cols-3 rounded-none border-b">
+              <TabsTrigger value="sections" className="text-xs">
+                <FileText className="h-3 w-3 mr-1" />
+                Sections
+              </TabsTrigger>
+              <TabsTrigger value="templates" className="text-xs">
+                <Palette className="h-3 w-3 mr-1" />
+                Templates
+              </TabsTrigger>
+              <TabsTrigger value="versions" className="text-xs">
+                <History className="h-3 w-3 mr-1" />
+                Versions
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sections" className="flex-1 overflow-hidden m-0">
+              <SectionSidebar
+                sections={currentSections}
+                onOptimizeSection={handleOptimizeSection}
+                onSectionClick={handleSectionClick}
+                data-testid="section-sidebar"
+              />
+            </TabsContent>
+
+            <TabsContent value="templates" className="flex-1 overflow-auto m-0 p-3">
+              <div className="space-y-2">
+                {templates.map((template) => (
+                  <Card
+                    key={template.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${
+                      currentTemplateId === template.id ? 'ring-2 ring-primary' : ''
+                    }`}
+                    onClick={() => handleQuickSelectTemplate(template)}
+                  >
+                    <CardHeader className="p-3">
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-sm">{template.name}</CardTitle>
+                        {currentTemplateId === template.id && (
+                          <Badge variant="secondary" className="text-xs">Current</Badge>
+                        )}
+                      </div>
+                      <CardDescription className="text-xs">{template.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="versions" className="flex-1 overflow-auto m-0 p-3">
+              <div className="space-y-2">
+                {savedVersions.length === 0 ? (
+                  <div className="text-center text-muted-foreground text-sm py-8">
+                    <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p>No saved versions yet</p>
+                    <p className="text-xs mt-1">Use Save button in editor to create versions</p>
+                  </div>
+                ) : (
+                  savedVersions.map((version) => (
+                    <Card key={version.timestamp} className="cursor-pointer hover:shadow-md">
+                      <CardHeader className="p-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-sm truncate">{version.name}</CardTitle>
+                            <CardDescription className="text-xs">
+                              {new Date(version.timestamp).toLocaleString()}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 mt-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7 flex-1"
+                            onClick={() => handleRestoreVersion(version)}
+                          >
+                            Restore
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs h-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteVersion(version.timestamp);
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
-        {/* LaTeX Editor - 40% width */}
-        <div className="w-2/5 min-w-0 border-r border-border">
-          <LatexEditor
-            ref={editorRef}
-            content={latexContent}
-            data-testid="latex-editor"
-          />
-        </div>
+        {/* Resizable LaTeX Editor and PDF Preview */}
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          <ResizablePanel defaultSize={40} minSize={20}>
+            <div className="h-full border-r border-border">
+              <LatexEditor
+                ref={editorRef}
+                content={latexContent}
+                data-testid="latex-editor"
+              />
+            </div>
+          </ResizablePanel>
 
-        {/* PDF Preview - 40% width */}
-        <div className="w-2/5 min-w-0">
-          <PdfPreview
-            resumeId={currentResumeId}
-            onDownload={handleDownload}
-            pdfUrl={currentResume?.pdfUrl}
-            compilationError={compilationError}
-            onErrorLineClick={handleErrorLineClick}
-            data-testid="pdf-preview"
-          />
-        </div>
+          <ResizableHandle withHandle />
+
+          <ResizablePanel defaultSize={60} minSize={20}>
+            <div className="h-full">
+              <PdfPreview
+                resumeId={currentResumeId}
+                onDownload={handleDownload}
+                pdfUrl={currentResume?.pdfUrl}
+                compilationError={compilationError}
+                onErrorLineClick={handleErrorLineClick}
+                data-testid="pdf-preview"
+              />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </main>
 
-      {/* Floating Compile Button */}
-      <Button
-        className="floating-compile-btn"
-        size="lg"
-        onClick={handleSaveAndCompile}
-        disabled={compileMutation.isPending || updateResumeMutation.isPending}
-        data-testid="floating-compile-btn"
-      >
-        <Play className="h-5 w-5" />
-      </Button>
+      {/* Floating Buttons */}
+      <div className="fixed bottom-6 left-6 flex flex-col space-y-3">
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={() => setShowTemplateSelector(true)}
+          title="Choose a template"
+        >
+          <FileText className="h-5 w-5 mr-2" />
+          Templates
+        </Button>
+        <Button
+          className="floating-compile-btn"
+          size="lg"
+          onClick={handleSaveAndCompile}
+          disabled={compileMutation.isPending || updateResumeMutation.isPending}
+          data-testid="floating-compile-btn"
+        >
+          <Play className="h-5 w-5" />
+        </Button>
+      </div>
 
       {/* Modals */}
       <OptimizeModal
@@ -516,6 +722,25 @@ export default function ResumeEditor() {
         onAccept={handleApplyOptimization}
         isApplying={applyOptimizationMutation.isPending}
         data-testid="diff-view-modal"
+      />
+
+      <TemplateSelector
+        open={showTemplateSelector}
+        onOpenChange={setShowTemplateSelector}
+        onSelectTemplate={handleSelectTemplate}
+        currentTemplateId={currentTemplateId}
+      />
+
+      <ApiKeyDialog
+        open={showApiKeyDialog}
+        onOpenChange={setShowApiKeyDialog}
+        onApiKeySet={() => {
+          setShowApiKeyDialog(false);
+          toast({
+            title: 'API Key Saved',
+            description: 'You can now use AI-powered optimization features.',
+          });
+        }}
       />
     </div>
   );

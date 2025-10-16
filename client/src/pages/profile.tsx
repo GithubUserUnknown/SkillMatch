@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,24 +7,31 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLocation } from 'wouter';
-import { 
-  Plus, 
-  X, 
-  Save, 
-  Upload, 
-  Download, 
-  User, 
-  Briefcase, 
-  GraduationCap, 
-  Code, 
-  Award, 
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import Navbar from '@/components/Navbar';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import {
+  Plus,
+  X,
+  Save,
+  Upload,
+  Download,
+  User,
+  Briefcase,
+  GraduationCap,
+  Code,
+  Award,
   FolderOpen,
-  FileText,
-  Edit,
-  Zap,
-  Target,
-  Moon
+  Key,
+  Eye,
+  EyeOff,
+  Trash2,
+  Shield
 } from 'lucide-react';
+import { getApiKeyMetadata, maskApiKey, getApiKey, deleteApiKey } from '@/lib/api-key-manager';
+import ApiKeyDialog from '@/components/api-key-dialog';
 
 interface Experience {
   id: string;
@@ -54,6 +61,13 @@ interface Project {
 
 export default function Profile() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKeyMetadata, setApiKeyMetadata] = useState(getApiKeyMetadata());
   const [profileData, setProfileData] = useState({
     basicInfo: {
       name: 'John Doe',
@@ -126,6 +140,127 @@ export default function Profile() {
   const [newSkill, setNewSkill] = useState('');
   const [skillCategory, setSkillCategory] = useState<'technical' | 'soft' | 'certifications'>('technical');
 
+  // Load profile data from Supabase
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+          // Table might not exist yet, just use default data
+          console.warn('Supabase error (using default data):', error);
+          // Update email from user account
+          setProfileData(prev => ({
+            ...prev,
+            basicInfo: {
+              ...prev.basicInfo,
+              email: user.email || ''
+            }
+          }));
+          setLoading(false);
+          return;
+        }
+
+        if (data) {
+          setProfileData({
+            basicInfo: {
+              name: data.full_name || '',
+              email: data.email || user.email || '',
+              phone: data.phone || '',
+              linkedin: data.linkedin || '',
+              github: data.github || '',
+              website: data.website || ''
+            },
+            experience: data.experience || [],
+            education: data.education || [],
+            skills: data.skills || { technical: [], soft: [], certifications: [] },
+            projects: data.projects || []
+          });
+        } else {
+          // No profile data, update email from user account
+          setProfileData(prev => ({
+            ...prev,
+            basicInfo: {
+              ...prev.basicInfo,
+              email: user.email || ''
+            }
+          }));
+        }
+      } catch (error: any) {
+        console.error('Error loading profile:', error);
+        // Don't show error toast, just use default data
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user]);
+
+  // Save profile data to Supabase
+  const saveProfile = async () => {
+    if (!user) {
+      toast({
+        title: 'Not logged in',
+        description: 'Please log in to save your profile.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user.id,
+          full_name: profileData.basicInfo.name,
+          email: profileData.basicInfo.email,
+          phone: profileData.basicInfo.phone,
+          linkedin: profileData.basicInfo.linkedin,
+          github: profileData.basicInfo.github,
+          website: profileData.basicInfo.website,
+          experience: profileData.experience,
+          education: profileData.education,
+          skills: profileData.skills,
+          projects: profileData.projects,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Supabase save error:', error);
+        toast({
+          title: 'Database not set up',
+          description: 'Please run the SQL schema from SUPABASE_SETUP.md. Changes saved locally for now.',
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Profile saved',
+          description: 'Your profile has been saved successfully.'
+        });
+      }
+    } catch (error: any) {
+      console.error('Error saving profile:', error);
+      toast({
+        title: 'Database not set up',
+        description: 'Please run the SQL schema from SUPABASE_SETUP.md. Changes saved locally for now.',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const addSkill = () => {
     if (newSkill.trim()) {
       setProfileData(prev => ({
@@ -147,6 +282,24 @@ export default function Profile() {
         [category]: prev.skills[category].filter((_, i) => i !== index)
       }
     }));
+  };
+
+  const handleDeleteApiKey = () => {
+    deleteApiKey();
+    setApiKeyMetadata(getApiKeyMetadata());
+    setShowApiKey(false);
+    toast({
+      title: 'API Key Deleted',
+      description: 'Your Gemini API key has been removed from local storage.',
+    });
+  };
+
+  const handleApiKeySet = () => {
+    setApiKeyMetadata(getApiKeyMetadata());
+    toast({
+      title: 'API Key Saved',
+      description: 'Your Gemini API key has been saved locally for 30 days.',
+    });
   };
 
   const addExperience = () => {
@@ -209,61 +362,26 @@ export default function Profile() {
     }));
   };
 
-  return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <FileText className="text-primary text-xl" />
-              <h1 className="text-xl font-bold">SkillMatch Resume Maker</h1>
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <div className="h-screen flex flex-col bg-background overflow-hidden">
+          <Navbar currentPage="profile" />
+          <main className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading profile...</p>
             </div>
-            <nav className="flex space-x-1">
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation("/")}
-              >
-                <FileText className="h-4 w-4 mr-2" />Home
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation("/resume-editor")}
-              >
-                <Edit className="h-4 w-4 mr-2" />Edit Resume
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation("/quick-update")}
-              >
-                <Zap className="h-4 w-4 mr-2" />Quick Update
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation("/dashboard")}
-              >
-                <Target className="h-4 w-4 mr-2" />Dashboard
-              </Button>
-              <Button 
-                className="bg-primary text-primary-foreground"
-              >
-                <User className="h-4 w-4 mr-2" />Profile
-              </Button>
-            </nav>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon">
-              <Moon className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <span className="text-sm font-medium">John Doe</span>
-            </Button>
-          </div>
+          </main>
         </div>
-      </header>
+      </ProtectedRoute>
+    );
+  }
+
+  return (
+    <ProtectedRoute>
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        <Navbar currentPage="profile" />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto p-8">
@@ -286,15 +404,15 @@ export default function Profile() {
                   <Download className="h-4 w-4 mr-1" />
                   Export Profile
                 </Button>
-                <Button size="sm">
+                <Button size="sm" onClick={saveProfile} disabled={saving}>
                   <Save className="h-4 w-4 mr-1" />
-                  Save Changes
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </div>
 
             <Tabs defaultValue="basic" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="basic" className="flex items-center space-x-1">
                   <User className="h-4 w-4" />
                   <span className="hidden sm:inline">Basic Info</span>
@@ -318,6 +436,10 @@ export default function Profile() {
                 <TabsTrigger value="projects" className="flex items-center space-x-1">
                   <FolderOpen className="h-4 w-4" />
                   <span className="hidden sm:inline">Projects</span>
+                </TabsTrigger>
+                <TabsTrigger value="apikey" className="flex items-center space-x-1">
+                  <Key className="h-4 w-4" />
+                  <span className="hidden sm:inline">API Key</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -644,11 +766,139 @@ export default function Profile() {
                   ))}
                 </div>
               </TabsContent>
+
+              {/* API Key Management Tab */}
+              <TabsContent value="apikey">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Shield className="h-5 w-5 text-primary" />
+                      <span>Gemini API Key Management</span>
+                    </CardTitle>
+                    <CardDescription>
+                      Manage your Google Gemini API key for AI-powered features. Your key is stored locally and never sent to our servers.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* API Key Status */}
+                    <div className="bg-muted p-4 rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Key className="h-5 w-5 text-primary" />
+                          <span className="font-medium">API Key Status</span>
+                        </div>
+                        {apiKeyMetadata.exists ? (
+                          <Badge variant="default">Active</Badge>
+                        ) : (
+                          <Badge variant="secondary">Not Set</Badge>
+                        )}
+                      </div>
+
+                      {apiKeyMetadata.exists && (
+                        <>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Your API Key:</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowApiKey(!showApiKey)}
+                              >
+                                {showApiKey ? (
+                                  <>
+                                    <EyeOff className="h-4 w-4 mr-1" />
+                                    Hide
+                                  </>
+                                ) : (
+                                  <>
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    Show
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                            <div className="bg-background p-3 rounded border font-mono text-sm">
+                              {showApiKey ? getApiKey() : maskApiKey(getApiKey() || '')}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Expires in:</span>
+                            <span className="font-medium">
+                              {apiKeyMetadata.daysRemaining} {apiKeyMetadata.daysRemaining === 1 ? 'day' : 'days'}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Features using API Key */}
+                    <div className="space-y-3">
+                      <h3 className="font-medium">Features using your API key:</h3>
+                      <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4">
+                        <li>AI-powered resume section optimization</li>
+                        <li>Personalized project recommendations</li>
+                        <li>Certificate and course suggestions</li>
+                        <li>Career chatbot (Strict HR, Counsellor, Friend personas)</li>
+                      </ul>
+                    </div>
+
+                    {/* Privacy Notice */}
+                    <div className="bg-primary/10 p-4 rounded-lg space-y-2">
+                      <p className="font-medium flex items-center space-x-2">
+                        <Shield className="h-4 w-4" />
+                        <span>Privacy & Security</span>
+                      </p>
+                      <ul className="list-disc list-inside space-y-1 text-sm ml-4">
+                        <li>Stored <strong>locally</strong> in your browser only</li>
+                        <li>Never sent to our servers</li>
+                        <li>Automatically expires after 30 days</li>
+                        <li>You have full control to delete anytime</li>
+                      </ul>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center space-x-3">
+                      {apiKeyMetadata.exists ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowApiKeyDialog(true)}
+                          >
+                            <Key className="h-4 w-4 mr-2" />
+                            Update API Key
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={handleDeleteApiKey}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete API Key
+                          </Button>
+                        </>
+                      ) : (
+                        <Button onClick={() => setShowApiKeyDialog(true)}>
+                          <Key className="h-4 w-4 mr-2" />
+                          Add API Key
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         </div>
       </main>
+
+      {/* API Key Dialog */}
+      <ApiKeyDialog
+        open={showApiKeyDialog}
+        onOpenChange={setShowApiKeyDialog}
+        onApiKeySet={handleApiKeySet}
+      />
     </div>
+    </ProtectedRoute>
   );
 }
 
