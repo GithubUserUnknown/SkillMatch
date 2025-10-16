@@ -114,11 +114,6 @@ export function startPeriodicCleanup(
 ): NodeJS.Timeout {
   console.log(`Starting periodic cleanup task (interval: ${intervalMs / 1000}s, max age: ${maxAgeMs / 1000}s)`);
 
-  // Run cleanup immediately
-  cleanupAllTempFiles({ maxAgeMs }).catch(err => {
-    console.error('Initial cleanup failed:', err);
-  });
-
   // Schedule periodic cleanup
   const interval = setInterval(() => {
     cleanupAllTempFiles({ maxAgeMs }).catch(err => {
