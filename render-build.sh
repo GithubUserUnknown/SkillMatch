@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 # Render build script - Installs system dependencies and builds the app
 
@@ -10,9 +11,6 @@ apt-get update
 
 # Install LaTeX (for PDF compilation)
 echo "📄 Installing LaTeX..."
-# texlive-latex-base: Basic LaTeX packages
-# texlive-latex-extra: Additional LaTeX packages (titlesec, enumitem, etc.)
-# texlive-fonts-recommended: Recommended fonts
 # texlive-bibtex-extra: Bibliography packages (biblatex)
 # texlive-fonts-extra: Additional fonts (fontawesome5)
 apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-bibtex-extra texlive-fonts-extra
@@ -52,4 +50,5 @@ fi
 npm run build
 
 echo "✅ Build completed successfully!"
+
 
