@@ -84,15 +84,46 @@ function parseLatexError(logs: string): { line?: number; message?: string } {
   return { line: errorLine, message: errorMessage };
 }
 
-export async function compileLatex(latexContent: string): Promise<LaTeXCompilationResult> {
+// Cleanup old temporary files (older than 1 hour)
+async function cleanupOldFiles(directory: string, maxAgeMs: number = 3600000) {
+  try {
+    const files = await fs.readdir(directory);
+    const now = Date.now();
+
+    for (const file of files) {
+      const filePath = path.join(directory, file);
+      try {
+        const stats = await fs.stat(filePath);
+        const age = now - stats.mtimeMs;
+
+        if (age > maxAgeMs) {
+          await fs.unlink(filePath);
+          console.log(`Cleaned up old file: ${file}`);
+        }
+      } catch (err) {
+        // Ignore errors for individual files
+      }
+    }
+  } catch (err) {
+    // Directory might not exist yet
+  }
+}
+
+export async function compileLatex(latexContent: string, resumeId?: string): Promise<LaTeXCompilationResult> {
   const tempDir = path.join(process.cwd(), 'server', 'public', 'pdfs');
-  const jobId = randomUUID();
+
+  // Use resumeId if provided, otherwise use UUID (for temporary compilations)
+  const jobId = resumeId || `temp-${randomUUID()}`;
   const texFile = path.join(tempDir, `${jobId}.tex`);
   const pdfFile = path.join(tempDir, `${jobId}.pdf`);
   const publicPdfPath = `/pdfs/${jobId}.pdf`; // HTTP accessible path
 
   try {
     await fs.mkdir(tempDir, { recursive: true });
+
+    // Cleanup old temporary files (async, don't wait)
+    cleanupOldFiles(tempDir).catch(() => {});
+
     await fs.writeFile(texFile, latexContent);
 
     const isWindows = process.platform === "win32";
@@ -120,6 +151,14 @@ export async function compileLatex(latexContent: string): Promise<LaTeXCompilati
       // Check if PDF was generated successfully
       try {
         await fs.access(pdfFile);
+
+        // Clean up auxiliary files immediately (keep only .tex and .pdf)
+        const auxFiles = ['.aux', '.log', '.out', '.toc', '.lof', '.lot'];
+        for (const ext of auxFiles) {
+          const auxFile = path.join(tempDir, `${jobId}${ext}`);
+          await fs.unlink(auxFile).catch(() => {});
+        }
+
         return {
           success: true,
           pdfPath: publicPdfPath,
@@ -128,6 +167,10 @@ export async function compileLatex(latexContent: string): Promise<LaTeXCompilati
       } catch {
         // PDF was not generated - parse error from logs
         const errorInfo = parseLatexError(stdout + stderr);
+
+        // Clean up failed compilation files
+        await fs.unlink(texFile).catch(() => {});
+
         return {
           success: false,
           error: errorInfo.message || 'PDF generation failed',

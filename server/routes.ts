@@ -116,7 +116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Resume not found" });
       }
 
-      const result = await compileLatex(resume.latexContent);
+      // Pass resumeId to reuse the same filename (overwrite previous PDF)
+      const result = await compileLatex(resume.latexContent, req.params.id);
 
       if (result.success && result.pdfPath) {
         // Store PDF path in resume
