@@ -134,3 +134,13 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Generated PDFs and temporary files
+server/public/pdfs/*.pdf
+server/public/pdfs/*.tex
+server/public/pdfs/*.aux
+server/public/pdfs/*.log
+server/public/pdfs/*.out
+uploads/*.pdf
+uploads/*.docx
+temp/

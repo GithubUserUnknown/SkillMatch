@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from 'path';
+import { startPeriodicCleanup } from "./services/cleanup";
 
 const app = express();
 app.use(express.json());
@@ -83,6 +84,12 @@ const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
 function listen() {
   server.listen({ port, host }, () => {
     console.log(`✅ Server listening on http://${host}:${port}`);
+
+    // Start periodic cleanup in production (every 30 minutes, delete files older than 1 hour)
+    if (process.env.NODE_ENV === 'production') {
+      startPeriodicCleanup(1800000, 3600000); // 30 min interval, 1 hour max age
+      console.log('🧹 Periodic cleanup task started');
+    }
   });
 }
 

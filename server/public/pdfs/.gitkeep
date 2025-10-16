@@ -1,0 +1,3 @@
+# This file ensures the pdfs directory is tracked by git
+# Temporary PDF files are generated here and cleaned up automatically
+
