@@ -1,25 +1,16 @@
 # Use Node.js 18 slim image
 FROM node:18-slim
 
-# Install LaTeX (for PDF compilation)
-RUN apt-get install -y \
+# Install LaTeX + PDF utilities + Pandoc
+RUN apt-get update && apt-get install -y \
     texlive-latex-base \
     texlive-latex-extra \
     texlive-fonts-recommended \
     texlive-bibtex-extra \
-    texlive-fonts-extra \
     biber \
-    # Install Pandoc (for DOC conversion)
-    # Install poppler-utils (for pdftotext - PDF parsing)
     poppler-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-# Update package list
-RUN apt-get update
-# Update TeX Live
-RUN tlmgr update --self
-RUN tlmgr update --all
 
 # Set working directory
 WORKDIR /app
@@ -44,4 +35,3 @@ ENV NODE_ENV=production
 
 # Start the application
 CMD ["npm", "start"]
-
