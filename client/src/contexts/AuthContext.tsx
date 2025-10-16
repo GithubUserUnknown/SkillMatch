@@ -63,10 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    // Use VITE_SITE_URL from environment, fallback to current origin
+    const redirectURL = import.meta.env.VITE_SITE_URL
+      ? `${import.meta.env.VITE_SITE_URL}`
+      : `${window.location.origin}/`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://www.skillmatch.insaneworld.dev/',
+        redirectTo: redirectURL,
       },
     });
     return { error };

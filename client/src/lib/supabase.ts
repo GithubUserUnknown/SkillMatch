@@ -11,7 +11,9 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    // Use VITE_SITE_URL for redirects, fallback to window.location.origin
+    redirectTo: import.meta.env.VITE_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : undefined)
   }
 });
 
