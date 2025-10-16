@@ -1,7 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://ynqahslykouwvnowcazp.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || '';
+
+// Supabase anon key - safe to expose in client-side code
+// This is a public key protected by Row Level Security (RLS)
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlucWFoc2x5a291d3Zub3djYXpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzMzE4MDQsImV4cCI6MjA2NzkwNzgwNH0.GHYYhmDCw-yLnirPSTUzZcPc_QaOjkqjfnbvAmq4W-8';
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
