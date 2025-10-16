@@ -1,18 +1,25 @@
 # Use Node.js 18 slim image
 FROM node:18-slim
 
-# Install system dependencies required for the app
-RUN apt-get update && apt-get install -y \
-    # LaTeX for PDF compilation
+# Install LaTeX (for PDF compilation)
+RUN apt-get install -y \
     texlive-latex-base \
     texlive-latex-extra \
     texlive-fonts-recommended \
-    # Pandoc for DOC conversion
-    pandoc \
-    # pdftotext for PDF parsing
+    texlive-bibtex-extra \
+    texlive-fonts-extra \
+    biber \
+    # Install Pandoc (for DOC conversion)
+    # Install poppler-utils (for pdftotext - PDF parsing)
     poppler-utils \
-    # Clean up to reduce image size
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Update package list
+RUN apt-get update
+# Update TeX Live
+RUN tlmgr update --self
+RUN tlmgr update --all
 
 # Set working directory
 WORKDIR /app
