@@ -3,14 +3,20 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { startPeriodicCleanup } from "./services/cleanup";
+
+// Get the directory path in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '..');
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 // Add before other routes
-app.use('/pdfs', express.static(path.join(process.cwd(), 'server', 'public', 'pdfs')));
+app.use('/pdfs', express.static(path.join(PROJECT_ROOT, 'server', 'public', 'pdfs')));
 
 app.use((req, res, next) => {
   const start = Date.now();

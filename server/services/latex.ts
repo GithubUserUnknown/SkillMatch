@@ -3,8 +3,14 @@ import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
+import { fileURLToPath } from 'url';
 
 const execAsync = promisify(exec);
+
+// Get the directory path in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '../..');
 
 export interface LaTeXCompilationResult {
   success: boolean;
@@ -110,7 +116,7 @@ async function cleanupOldFiles(directory: string, maxAgeMs: number = 3600000) {
 }
 
 export async function compileLatex(latexContent: string, resumeId?: string): Promise<LaTeXCompilationResult> {
-  const tempDir = path.join(process.cwd(), 'server', 'public', 'pdfs');
+  const tempDir = path.join(PROJECT_ROOT, 'server', 'public', 'pdfs');
 
   // Use resumeId if provided, otherwise use UUID (for temporary compilations)
   const jobId = resumeId || `temp-${randomUUID()}`;

@@ -1,5 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get the directory path in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '../..');
 
 /**
  * Cleanup service for temporary files
@@ -82,9 +88,9 @@ export async function cleanupDirectory(
  */
 export async function cleanupAllTempFiles(options: CleanupOptions = {}): Promise<void> {
   const directories = [
-    path.join(process.cwd(), 'server', 'public', 'pdfs'),
-    path.join(process.cwd(), 'uploads'),
-    path.join(process.cwd(), 'temp'),
+    path.join(PROJECT_ROOT, 'server', 'public', 'pdfs'),
+    path.join(PROJECT_ROOT, 'uploads'),
+    path.join(PROJECT_ROOT, 'temp'),
   ];
 
   console.log('Starting cleanup of temporary files...');
@@ -129,7 +135,7 @@ export function startPeriodicCleanup(
  * @param resumeId - Resume ID
  */
 export async function cleanupResumeFiles(resumeId: string): Promise<void> {
-  const pdfsDir = path.join(process.cwd(), 'server', 'public', 'pdfs');
+  const pdfsDir = path.join(PROJECT_ROOT, 'server', 'public', 'pdfs');
 
   try {
     const files = await fs.readdir(pdfsDir);

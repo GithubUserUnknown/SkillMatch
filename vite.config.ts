@@ -30,6 +30,17 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000, // Increase from default 500kb to 1000kb
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split vendor chunks to reduce bundle size
+          'react-vendor': ['react', 'react-dom', 'react-hook-form'],
+          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tabs'],
+          'query-vendor': ['@tanstack/react-query'],
+        },
+      },
+    },
   },
   server: {
     fs: {

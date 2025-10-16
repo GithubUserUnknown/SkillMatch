@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import * as path from "path";
+import { fileURLToPath } from 'url';
 import { optimizationRequestSchema, batchOptimizationRequestSchema } from "@shared/schema";
 import { optimizeResumeSection, batchOptimizeResume, optimizeFullResume } from "./services/gemini";
 import { compileLatex, extractSections, updateSectionInLatex } from "./services/latex";
@@ -12,6 +13,11 @@ import * as skillmatch from "./services/skillmatch";
 import * as chatbot from "./services/chatbot";
 import { exec } from "child_process";
 import { promisify } from "util";
+
+// Get the directory path in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PROJECT_ROOT = path.resolve(__dirname, '..');
 
 const upload = multer({
   dest: 'uploads/',
@@ -153,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Serve the PDF file
-      const pdfPath = path.join(process.cwd(), 'server', 'public', resume.pdfUrl);
+      const pdfPath = path.join(PROJECT_ROOT, 'server', 'public', resume.pdfUrl);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(pdfPath);
