@@ -32,6 +32,18 @@ npm install
 
 # Build the application
 echo "🔨 Building application..."
+echo "📝 Environment variables for build:"
+echo "  - VITE_SUPABASE_KEY: ${VITE_SUPABASE_KEY:0:10}..." # Show first 10 chars only
+echo "  - NODE_ENV: $NODE_ENV"
+
+# Ensure VITE_ variables are available during build
+# Vite needs these at build time to embed them in the bundle
+if [ -z "$VITE_SUPABASE_KEY" ]; then
+  echo "⚠️  WARNING: VITE_SUPABASE_KEY is not set!"
+  echo "   The frontend will not be able to connect to Supabase."
+  echo "   Please set this environment variable in Render dashboard."
+fi
+
 npm run build
 
 echo "✅ Build completed successfully!"
