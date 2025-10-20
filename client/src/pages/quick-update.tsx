@@ -192,6 +192,9 @@ export default function QuickUpdate() {
             <p className="text-muted-foreground text-xl">
               We're putting the final touches on this feature. It'll be worth the wait!
             </p>
+            <Button onClick={() => setLocation("/")} className="mt-6">
+              Back to Homepage
+            </Button>
           </div>
         </div>
 

@@ -66,20 +66,34 @@ export async function downloadFileFromStorage(
   bucket: string = 'resume-files'
 ): Promise<Buffer> {
   try {
+    console.log(`[Supabase Download] Attempting to download: ${storagePath} from bucket: ${bucket}`);
+
     const { data, error } = await supabase.storage
       .from(bucket)
       .download(storagePath);
 
     if (error) {
-      console.error('Supabase storage download error:', error);
+      console.error('[Supabase Download] Download error:', {
+        storagePath,
+        bucket,
+        error: error.message,
+        errorDetails: error
+      });
       throw new Error(`Failed to download file: ${error.message}`);
     }
+
+    if (!data) {
+      console.error('[Supabase Download] No data returned');
+      throw new Error('No data returned from Supabase Storage');
+    }
+
+    console.log(`[Supabase Download] Download successful, size: ${data.size} bytes`);
 
     // Convert Blob to Buffer
     const arrayBuffer = await data.arrayBuffer();
     return Buffer.from(arrayBuffer);
   } catch (error) {
-    console.error('Error downloading file from storage:', error);
+    console.error('[Supabase Download] Error downloading file from storage:', error);
     throw error;
   }
 }

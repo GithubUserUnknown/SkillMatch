@@ -56,11 +56,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const resumeFilesBucket = buckets?.find(b => b.id === 'resume-files');
 
+      // Try to list files in the bucket
+      let filesInBucket: string[] = [];
+      if (resumeFilesBucket) {
+        const { data: files, error: listError } = await supabase.storage
+          .from('resume-files')
+          .list('default-user', {
+            limit: 10,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+
+        if (!listError && files) {
+          filesInBucket = files.map(f => f.name);
+        }
+      }
+
       res.json({
         status: "ok",
         supabaseConnected: true,
         resumeFilesBucketExists: !!resumeFilesBucket,
         buckets: buckets?.map(b => b.id) || [],
+        filesInBucket,
         message: resumeFilesBucket
           ? "Supabase Storage is configured correctly"
           : "Warning: 'resume-files' bucket not found. Please run the database migration."
@@ -148,6 +164,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(resume);
     } catch (error) {
       res.status(500).json({ error: "Failed to update resume" });
+    }
+  });
+
+  // Delete a resume
+  app.delete("/api/resumes/:id", async (req, res) => {
+    try {
+      const resume = await storage.getResume(req.params.id);
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      await storage.deleteResume(req.params.id);
+      res.json({ success: true, message: "Resume deleted successfully" });
+    } catch (error) {
+      console.error('Delete resume error:', error);
+      res.status(500).json({ error: "Failed to delete resume" });
     }
   });
 

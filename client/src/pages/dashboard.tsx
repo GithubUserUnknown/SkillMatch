@@ -6,10 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import Navbar from '@/components/Navbar';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Download,
   Copy,
@@ -33,124 +33,60 @@ import {
 
 interface Resume {
   id: string;
+  name: string;
+  latexContent: string;
+  pdfUrl: string | null;
+  pdfStoragePath: string | null;
+  texStoragePath: string | null;
+  template: string;
+  sections: any[];
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+}
+
+interface DashboardResume {
+  id: string;
   title: string;
-  matchScore: number;
-  lastJobDescription: string;
   lastUpdated: string;
   status: 'draft' | 'completed' | 'optimized';
-  downloads: number;
-  versions: number;
 }
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'draft' | 'completed' | 'optimized'>('all');
-  const [loading, setLoading] = useState(true);
 
-  const [resumes, setResumes] = useState<Resume[]>([
-    {
-      id: '1',
-      title: 'Senior Software Engineer Resume',
-      matchScore: 91,
-      lastJobDescription: 'Senior Software Engineer at Microsoft',
-      lastUpdated: '2024-01-15',
-      status: 'optimized',
-      downloads: 5,
-      versions: 3
-    },
-    {
-      id: '2',
-      title: 'Data Scientist Resume',
-      matchScore: 78,
-      lastJobDescription: 'Data Scientist at Google',
-      lastUpdated: '2024-01-12',
-      status: 'completed',
-      downloads: 2,
-      versions: 2
-    },
-    {
-      id: '3',
-      title: 'Frontend Developer Resume',
-      matchScore: 0,
-      lastJobDescription: '',
-      lastUpdated: '2024-01-10',
-      status: 'draft',
-      downloads: 0,
-      versions: 1
-    },
-    {
-      id: '4',
-      title: 'Full Stack Developer Resume',
-      matchScore: 85,
-      lastJobDescription: 'Full Stack Developer at Startup',
-      lastUpdated: '2024-01-08',
-      status: 'optimized',
-      downloads: 8,
-      versions: 4
-    }
-  ]);
-
-  // Load resumes from Supabase
-  useEffect(() => {
-    const loadResumes = async () => {
-      if (!user) {
-        // If no user, just use mock data and stop loading
-        setLoading(false);
-        return;
+  // Fetch resumes from API
+  const { data: resumes = [], isLoading: loading, error } = useQuery<Resume[]>({
+    queryKey: ['/api/resumes'],
+    queryFn: async () => {
+      const response = await fetch('/api/resumes');
+      if (!response.ok) {
+        throw new Error('Failed to fetch resumes');
       }
+      return response.json();
+    },
+  });
 
-      try {
-        const { data, error } = await supabase
-          .from('resumes')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('updated_at', { ascending: false });
+  // Transform resumes for display
+  const dashboardResumes: DashboardResume[] = resumes.map(resume => ({
+    id: resume.id,
+    title: resume.name,
+    lastUpdated: new Date(resume.updatedAt).toLocaleDateString(),
+    status: resume.pdfUrl ? 'completed' : 'draft' as 'draft' | 'completed' | 'optimized',
+  }));
 
-        if (error) {
-          // If table doesn't exist or other error, just use mock data
-          console.warn('Supabase error (using mock data):', error);
-          setLoading(false);
-          return;
-        }
-
-        if (data && data.length > 0) {
-          const formattedResumes: Resume[] = data.map(resume => ({
-            id: resume.id,
-            title: resume.title,
-            matchScore: resume.match_score || 0,
-            lastJobDescription: '', // We can add this field to the database if needed
-            lastUpdated: new Date(resume.updated_at).toISOString().split('T')[0],
-            status: resume.status as 'draft' | 'completed' | 'optimized',
-            downloads: resume.downloads,
-            versions: 1 // We can track versions if needed
-          }));
-          setResumes(formattedResumes);
-        } else {
-          // No resumes in database, keep mock data for demo
-          console.log('No resumes found in Supabase, using mock data');
-        }
-      } catch (error: any) {
-        console.error('Error loading resumes:', error);
-        // Don't show error toast, just use mock data
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadResumes();
-  }, [user]);
-
-  const filteredResumes = resumes.filter(resume => {
-    const matchesSearch = resume.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         resume.lastJobDescription.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredResumes = dashboardResumes.filter(resume => {
+    const matchesSearch = resume.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = selectedFilter === 'all' || resume.status === selectedFilter;
     return matchesSearch && matchesFilter;
   });
 
-  const getStatusColor = (status: Resume['status']) => {
+  const getStatusColor = (status: DashboardResume['status']) => {
     switch (status) {
       case 'optimized': return 'bg-green-100 text-green-800 border-green-200';
       case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -159,62 +95,111 @@ export default function Dashboard() {
     }
   };
 
-  const getMatchScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    if (score === 0) return 'text-gray-400';
-    return 'text-red-600';
+  // Delete resume mutation
+  const deleteResumeMutation = useMutation({
+    mutationFn: async (resumeId: string) => {
+      const response = await fetch(`/api/resumes/${resumeId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete resume');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/resumes'] });
+      toast({
+        title: 'Resume deleted',
+        description: 'The resume has been deleted successfully.'
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete resume. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  // Duplicate resume mutation
+  const duplicateResumeMutation = useMutation({
+    mutationFn: async (resumeId: string) => {
+      const original = resumes.find(r => r.id === resumeId);
+      if (!original) throw new Error('Resume not found');
+
+      const response = await fetch('/api/resumes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `${original.name} (Copy)`,
+          latexContent: original.latexContent,
+          template: original.template,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to duplicate resume');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/resumes'] });
+      toast({
+        title: 'Resume duplicated',
+        description: 'The resume has been duplicated successfully.'
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to duplicate resume. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  });
+
+  const deleteResume = (resumeId: string) => {
+    deleteResumeMutation.mutate(resumeId);
   };
 
   const duplicateResume = (resumeId: string) => {
-    const original = resumes.find(r => r.id === resumeId);
-    if (original) {
-      const duplicate: Resume = {
-        ...original,
-        id: Date.now().toString(),
-        title: `${original.title} (Copy)`,
-        lastUpdated: new Date().toISOString().split('T')[0],
-        downloads: 0,
-        versions: 1
-      };
-      setResumes(prev => [duplicate, ...prev]);
-    }
+    duplicateResumeMutation.mutate(resumeId);
   };
 
-  const deleteResume = async (resumeId: string) => {
-    // Delete from local state
-    setResumes(prev => prev.filter(r => r.id !== resumeId));
-
-    // If user is logged in, also delete from Supabase
-    if (user) {
-      try {
-        const { error } = await supabase
-          .from('resumes')
-          .delete()
-          .eq('id', resumeId)
-          .eq('user_id', user.id);
-
-        if (error) {
-          console.warn('Error deleting from Supabase:', error);
-          // Don't show error, local delete already happened
-        }
-      } catch (error: any) {
-        console.error('Error deleting resume:', error);
-        // Don't show error, local delete already happened
+  const downloadResume = async (resumeId: string) => {
+    try {
+      const response = await fetch(`/api/resumes/${resumeId}/download`);
+      if (!response.ok) {
+        throw new Error('Failed to download resume');
       }
-    }
 
-    toast({
-      title: 'Resume deleted',
-      description: 'The resume has been deleted successfully.'
-    });
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `resume-${resumeId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: 'Download started',
+        description: 'Your resume is being downloaded.'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to download resume. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const stats = {
-    totalResumes: resumes.length,
-    totalDownloads: resumes.reduce((sum, r) => sum + r.downloads, 0),
-    avgMatchScore: Math.round(resumes.filter(r => r.matchScore > 0).reduce((sum, r) => sum + r.matchScore, 0) / resumes.filter(r => r.matchScore > 0).length) || 0,
-    optimizedResumes: resumes.filter(r => r.status === 'optimized').length
+    totalResumes: dashboardResumes.length,
+    completedResumes: dashboardResumes.filter(r => r.status === 'completed' || r.status === 'optimized').length,
+    draftResumes: dashboardResumes.filter(r => r.status === 'draft').length,
   };
 
   if (loading) {
@@ -257,7 +242,7 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid md:grid-cols-4 gap-4 mb-8">
+            <div className="grid md:grid-cols-3 gap-4 mb-8">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
@@ -273,10 +258,10 @@ export default function Dashboard() {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <Download className="h-5 w-5 text-green-600" />
+                    <TrendingUp className="h-5 w-5 text-green-600" />
                     <div>
-                      <p className="text-2xl font-bold">{stats.totalDownloads}</p>
-                      <p className="text-xs text-muted-foreground">Downloads</p>
+                      <p className="text-2xl font-bold">{stats.completedResumes}</p>
+                      <p className="text-xs text-muted-foreground">Completed</p>
                     </div>
                   </div>
                 </CardContent>
@@ -285,22 +270,10 @@ export default function Dashboard() {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                    <Edit className="h-5 w-5 text-yellow-600" />
                     <div>
-                      <p className="text-2xl font-bold">{stats.avgMatchScore}%</p>
-                      <p className="text-xs text-muted-foreground">Avg Match Score</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-2">
-                    <Zap className="h-5 w-5 text-yellow-600" />
-                    <div>
-                      <p className="text-2xl font-bold">{stats.optimizedResumes}</p>
-                      <p className="text-xs text-muted-foreground">Optimized</p>
+                      <p className="text-2xl font-bold">{stats.draftResumes}</p>
+                      <p className="text-xs text-muted-foreground">Drafts</p>
                     </div>
                   </div>
                 </CardContent>
@@ -365,44 +338,17 @@ export default function Dashboard() {
                             </Badge>
                           </div>
 
-                          <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="h-4 w-4" />
-                              <span>Updated {resume.lastUpdated}</span>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <Download className="h-4 w-4" />
-                              <span>{resume.downloads} downloads</span>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <FileText className="h-4 w-4" />
-                              <span>{resume.versions} versions</span>
-                            </div>
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            <span>Updated {resume.lastUpdated}</span>
                           </div>
-
-                          {resume.lastJobDescription && (
-                            <div className="mt-3">
-                              <p className="text-sm text-muted-foreground mb-2">
-                                Last optimized for: {resume.lastJobDescription}
-                              </p>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm">Match Score:</span>
-                                <span className={`text-sm font-semibold ${getMatchScoreColor(resume.matchScore)}`}>
-                                  {resume.matchScore}%
-                                </span>
-                                <Progress value={resume.matchScore} className="w-24 h-2" />
-                              </div>
-                            </div>
-                          )}
                         </div>
 
                         <div className="flex items-center space-x-2 ml-4">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setLocation("/resume-editor")}
+                            onClick={() => setLocation(`/resume-editor?id=${resume.id}`)}
                           >
                             <Edit className="h-4 w-4 mr-1" />
                             Edit
@@ -410,14 +356,9 @@ export default function Dashboard() {
 
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => setLocation("/quick-update")}
+                            onClick={() => downloadResume(resume.id)}
+                            disabled={resume.status === 'draft'}
                           >
-                            <Zap className="h-4 w-4 mr-1" />
-                            Quick Update
-                          </Button>
-
-                          <Button size="sm">
                             <Download className="h-4 w-4 mr-1" />
                             Download
                           </Button>
@@ -433,7 +374,10 @@ export default function Dashboard() {
                                 <Copy className="h-4 w-4 mr-2" />
                                 Duplicate
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => window.open(`/api/resumes/${resume.id}/preview`, '_blank')}
+                                disabled={resume.status === 'draft'}
+                              >
                                 <Eye className="h-4 w-4 mr-2" />
                                 Preview
                               </DropdownMenuItem>
@@ -455,7 +399,7 @@ export default function Dashboard() {
             </div>
 
             {/* Quick Actions */}
-            <div className="mt-8 grid md:grid-cols-2 gap-6">
+            <div className="mt-8">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
@@ -463,7 +407,7 @@ export default function Dashboard() {
                     <span>Quick Actions</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="grid md:grid-cols-3 gap-3">
                   <Button variant="outline" className="w-full justify-start" onClick={() => setLocation("/resume-editor")}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create New Resume
@@ -476,31 +420,6 @@ export default function Dashboard() {
                     <Edit className="h-4 w-4 mr-2" />
                     Update Profile Info
                   </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-                      <span>Senior Software Engineer Resume optimized</span>
-                      <span className="text-muted-foreground ml-auto">2 hours ago</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                      <span>Data Scientist Resume downloaded</span>
-                      <span className="text-muted-foreground ml-auto">1 day ago</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="h-2 w-2 bg-purple-500 rounded-full"></div>
-                      <span>Profile information updated</span>
-                      <span className="text-muted-foreground ml-auto">3 days ago</span>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             </div>
