@@ -13,6 +13,7 @@ import * as skillmatch from "./services/skillmatch";
 import * as chatbot from "./services/chatbot";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { downloadFileFromStorage, getPublicUrl } from "./lib/supabase.js";
 
 // Get the directory path in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -169,11 +170,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Resume not found" });
       }
 
+      // Try to serve from Supabase Storage first
+      if (resume.pdfStoragePath) {
+        try {
+          const pdfBuffer = await downloadFileFromStorage(resume.pdfStoragePath);
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+          res.send(pdfBuffer);
+          return;
+        } catch (storageError) {
+          console.error('Failed to fetch from Supabase Storage, falling back to local:', storageError);
+        }
+      }
+
+      // Fallback to local file if Supabase fails or path not available
       if (!resume.pdfUrl) {
         return res.status(404).json({ error: "PDF not compiled yet" });
       }
 
-      // Serve the PDF file
       const pdfPath = path.join(PROJECT_ROOT, 'server', 'public', resume.pdfUrl);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Cache-Control', 'no-cache');
@@ -188,11 +202,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/resumes/:id/download", async (req, res) => {
     try {
       const resume = await storage.getResume(req.params.id);
-      if (!resume || !resume.pdfUrl) {
+      if (!resume) {
+        return res.status(404).json({ error: "Resume not found" });
+      }
+
+      // Try to download from Supabase Storage first
+      if (resume.pdfStoragePath) {
+        try {
+          const pdfBuffer = await downloadFileFromStorage(resume.pdfStoragePath);
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="${resume.name}.pdf"`);
+          res.send(pdfBuffer);
+          return;
+        } catch (storageError) {
+          console.error('Failed to download from Supabase Storage, falling back to local:', storageError);
+        }
+      }
+
+      // Fallback to local file
+      if (!resume.pdfUrl) {
         return res.status(404).json({ error: "PDF not found" });
       }
 
-      // Convert HTTP path to file system path
       const pdfPath = path.join(process.cwd(), 'server', 'public', resume.pdfUrl);
       res.download(pdfPath, `${resume.name}.pdf`);
     } catch (error) {
