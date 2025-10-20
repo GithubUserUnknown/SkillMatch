@@ -4,6 +4,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
+import { uploadFileToStorage, getPublicUrl } from '../lib/supabase.js';
 
 const execAsync = promisify(exec);
 
@@ -15,6 +16,8 @@ const PROJECT_ROOT = path.resolve(__dirname, '../..');
 export interface LaTeXCompilationResult {
   success: boolean;
   pdfPath?: string;
+  pdfStoragePath?: string; // Path in Supabase storage
+  texStoragePath?: string; // Path in Supabase storage
   error?: string;
   logs?: string;
   errorLine?: number;
@@ -165,9 +168,31 @@ export async function compileLatex(latexContent: string, resumeId?: string): Pro
           await fs.unlink(auxFile).catch(() => {});
         }
 
+        // Upload PDF and TEX files to Supabase Storage
+        let pdfStoragePath: string | undefined;
+        let texStoragePath: string | undefined;
+
+        try {
+          // Use 'default-user' as folder name for now (can be replaced with actual user ID)
+          const userId = 'default-user';
+          pdfStoragePath = `${userId}/${jobId}.pdf`;
+          texStoragePath = `${userId}/${jobId}.tex`;
+
+          // Upload both files to Supabase
+          await uploadFileToStorage(pdfFile, pdfStoragePath);
+          await uploadFileToStorage(texFile, texStoragePath);
+
+          console.log(`Uploaded files to Supabase: ${pdfStoragePath}, ${texStoragePath}`);
+        } catch (uploadError) {
+          console.error('Failed to upload to Supabase storage:', uploadError);
+          // Continue even if upload fails - local files still work
+        }
+
         return {
           success: true,
           pdfPath: publicPdfPath,
+          pdfStoragePath,
+          texStoragePath,
           logs: stdout
         };
       } catch {
@@ -242,10 +267,29 @@ startxref
 %%EOF`;
       
       await fs.writeFile(pdfFile, mockPdfContent);
-      
+
+      // Upload mock PDF and TEX files to Supabase Storage
+      let pdfStoragePath: string | undefined;
+      let texStoragePath: string | undefined;
+
+      try {
+        const userId = 'default-user';
+        pdfStoragePath = `${userId}/${jobId}.pdf`;
+        texStoragePath = `${userId}/${jobId}.tex`;
+
+        await uploadFileToStorage(pdfFile, pdfStoragePath);
+        await uploadFileToStorage(texFile, texStoragePath);
+
+        console.log(`Uploaded mock files to Supabase: ${pdfStoragePath}, ${texStoragePath}`);
+      } catch (uploadError) {
+        console.error('Failed to upload mock files to Supabase storage:', uploadError);
+      }
+
       return {
         success: true,
         pdfPath: publicPdfPath, // Return HTTP path, not file system path
+        pdfStoragePath,
+        texStoragePath,
         logs: 'Mock PDF generated for development (LaTeX not installed)'
       };
     }

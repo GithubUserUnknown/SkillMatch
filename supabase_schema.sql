@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS public.resumes (
   title TEXT NOT NULL,
   latex_content TEXT NOT NULL,
   pdf_url TEXT,
+  pdf_storage_path TEXT, -- Path to PDF file in Supabase Storage
+  tex_storage_path TEXT, -- Path to TEX file in Supabase Storage
   status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'completed', 'optimized')),
   match_score INTEGER,
   last_modified TIMESTAMPTZ DEFAULT NOW(),
@@ -260,4 +262,43 @@ CREATE TRIGGER update_user_chat_context_updated_at
   BEFORE UPDATE ON public.user_chat_context
   FOR EACH ROW
   EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Create storage bucket for resume files (PDFs and TEX files)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('resume-files', 'resume-files', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Create storage policies for resume-files bucket
+CREATE POLICY "Users can upload their own resume files"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'resume-files' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Users can view their own resume files"
+  ON storage.objects FOR SELECT
+  USING (
+    bucket_id = 'resume-files' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Users can update their own resume files"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'resume-files' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Users can delete their own resume files"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'resume-files' AND
+    auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+-- Allow public access to resume files (for sharing/downloading)
+CREATE POLICY "Public can view resume files"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'resume-files');
 

@@ -126,12 +126,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await compileLatex(resume.latexContent, req.params.id);
 
       if (result.success && result.pdfPath) {
-        // Store PDF path in resume
-        await storage.updateResume(req.params.id, {
+        // Store PDF path and storage paths in resume
+        const updateData: any = {
           pdfUrl: result.pdfPath
-        });
+        };
 
-        res.json({ success: true, pdfUrl: result.pdfPath });
+        // Add storage paths if available
+        if (result.pdfStoragePath) {
+          updateData.pdfStoragePath = result.pdfStoragePath;
+        }
+        if (result.texStoragePath) {
+          updateData.texStoragePath = result.texStoragePath;
+        }
+
+        await storage.updateResume(req.params.id, updateData);
+
+        res.json({
+          success: true,
+          pdfUrl: result.pdfPath,
+          pdfStoragePath: result.pdfStoragePath,
+          texStoragePath: result.texStoragePath
+        });
       } else {
         res.status(400).json({
           success: false,

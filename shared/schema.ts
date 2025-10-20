@@ -15,6 +15,8 @@ export const resumes = pgTable("resumes", {
   name: text("name").notNull(),
   latexContent: text("latex_content").notNull(),
   pdfUrl: text("pdf_url"),
+  pdfStoragePath: text("pdf_storage_path"), // Path to PDF in Supabase Storage
+  texStoragePath: text("tex_storage_path"), // Path to TEX in Supabase Storage
   template: text("template").notNull().default("modern"),
   sections: jsonb("sections").$type<ResumeSection[]>().notNull(),
   createdAt: timestamp("created_at").defaultNow(),
