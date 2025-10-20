@@ -37,7 +37,43 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
+
+  // Health check endpoint for Supabase Storage
+  app.get("/api/health/storage", async (req, res) => {
+    try {
+      const { supabase } = await import("./lib/supabase.js");
+
+      // Check if we can list buckets
+      const { data: buckets, error } = await supabase.storage.listBuckets();
+
+      if (error) {
+        return res.status(500).json({
+          status: "error",
+          message: "Failed to connect to Supabase Storage",
+          error: error.message
+        });
+      }
+
+      const resumeFilesBucket = buckets?.find(b => b.id === 'resume-files');
+
+      res.json({
+        status: "ok",
+        supabaseConnected: true,
+        resumeFilesBucketExists: !!resumeFilesBucket,
+        buckets: buckets?.map(b => b.id) || [],
+        message: resumeFilesBucket
+          ? "Supabase Storage is configured correctly"
+          : "Warning: 'resume-files' bucket not found. Please run the database migration."
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: "Failed to check Supabase Storage",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   // Get all resumes for a user
   app.get("/api/resumes", async (req, res) => {
     try {
@@ -167,31 +203,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const resume = await storage.getResume(req.params.id);
       if (!resume) {
+        console.error(`Resume not found: ${req.params.id}`);
         return res.status(404).json({ error: "Resume not found" });
       }
+
+      console.log(`Preview request for resume ${req.params.id}:`, {
+        hasPdfStoragePath: !!resume.pdfStoragePath,
+        hasPdfUrl: !!resume.pdfUrl,
+        pdfStoragePath: resume.pdfStoragePath,
+        pdfUrl: resume.pdfUrl
+      });
 
       // Try to serve from Supabase Storage first
       if (resume.pdfStoragePath) {
         try {
+          console.log(`Fetching from Supabase Storage: ${resume.pdfStoragePath}`);
           const pdfBuffer = await downloadFileFromStorage(resume.pdfStoragePath);
           res.setHeader('Content-Type', 'application/pdf');
           res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
           res.send(pdfBuffer);
           return;
         } catch (storageError) {
-          console.error('Failed to fetch from Supabase Storage, falling back to local:', storageError);
+          console.error('Failed to fetch from Supabase Storage:', storageError);
+          // Continue to fallback
         }
       }
 
       // Fallback to local file if Supabase fails or path not available
       if (!resume.pdfUrl) {
-        return res.status(404).json({ error: "PDF not compiled yet" });
+        console.error('No PDF available - neither storage path nor local URL');
+        return res.status(404).json({
+          error: "PDF not compiled yet. Please press Ctrl+S in the editor to compile."
+        });
       }
 
-      const pdfPath = path.join(PROJECT_ROOT, 'server', 'public', resume.pdfUrl);
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.sendFile(pdfPath);
+      try {
+        const pdfPath = path.join(PROJECT_ROOT, 'server', 'public', resume.pdfUrl);
+        console.log(`Attempting to serve local file: ${pdfPath}`);
+
+        // Check if file exists before trying to send it
+        await fs.access(pdfPath);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.sendFile(pdfPath);
+      } catch (fileError) {
+        console.error('Local file not found:', fileError);
+        return res.status(404).json({
+          error: "PDF file not found. Please press Ctrl+S in the editor to recompile."
+        });
+      }
     } catch (error) {
       console.error('PDF preview error:', error);
       res.status(500).json({ error: "Failed to serve PDF" });
