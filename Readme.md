@@ -14,7 +14,7 @@
 - 💾 **Resume Management**: Dashboard to organize and manage multiple resume versions
 
 ### Live Demo
-🌐 **URL**: http://127.0.0.1:5000 (when running locally)
+🌐 **URL**: https://www.skillmatch.insaneworld.dev/
 
 
 ## 🚀 Quick Start
