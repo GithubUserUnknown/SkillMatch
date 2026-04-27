@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import * as fs from 'fs/promises';
 
-const supabaseUrl = 'https://ynqahslykouwvnowcazp.supabase.co';
-const supabaseKey = process.env.SUPABASE_KEY || 
+const supabaseUrl = process.env.SUPABASE_URL || 'https://ynqahslykouwvnowcazp.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlucWFoc2x5a291d3Zub3djYXpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzMzE4MDQsImV4cCI6MjA2NzkwNzgwNH0.GHYYhmDCw-yLnirPSTUzZcPc_QaOjkqjfnbvAmq4W-8';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
@@ -22,13 +22,13 @@ export async function uploadFileToStorage(
   try {
     // Read the file
     const fileBuffer = await fs.readFile(filePath);
-    
+
     // Determine content type based on file extension
-    const contentType = storagePath.endsWith('.pdf') 
-      ? 'application/pdf' 
+    const contentType = storagePath.endsWith('.pdf')
+      ? 'application/pdf'
       : storagePath.endsWith('.tex')
-      ? 'text/plain'
-      : 'application/octet-stream';
+        ? 'text/plain'
+        : 'application/octet-stream';
 
     // Upload to Supabase Storage
     const { data, error } = await supabase.storage
@@ -135,7 +135,7 @@ export function getPublicUrl(
   const { data: { publicUrl } } = supabase.storage
     .from(bucket)
     .getPublicUrl(storagePath);
-  
+
   return publicUrl;
 }
 

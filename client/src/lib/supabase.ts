@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://ynqahslykouwvnowcazp.supabase.co';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ynqahslykouwvnowcazp.supabase.co';
 
 // Supabase anon key - safe to expose in client-side code
 // This is a public key protected by Row Level Security (RLS)
@@ -11,9 +11,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
-    // Use VITE_SITE_URL for redirects, fallback to window.location.origin
-    redirectTo: import.meta.env.VITE_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : undefined)
+    detectSessionInUrl: true
   }
 });
 
