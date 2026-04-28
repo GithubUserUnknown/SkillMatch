@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ynqahslykouwvnowcazp.supabase.co';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 
 // Supabase anon key - safe to expose in client-side code
 // This is a public key protected by Row Level Security (RLS)
